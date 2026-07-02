@@ -105,6 +105,10 @@ fuente única de verdad del sistema.
 
 # 3. Estructura de Datos
 
+A continuación se presenta el Diagrama de Entidad-Relación (DER) del sistema:
+
+![Diagrama Entidad-Relación (DER)](DERBANCO-PERSONAS.png)
+
 El sistema maneja dos bases de datos completamente independientes: una
 en el dispositivo (SQLite) y otra en el servidor (PostgreSQL). No son
 una réplica la una de la otra; tienen estructuras similares en los
