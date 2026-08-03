@@ -1,0 +1,66 @@
+package com.tuapp.bancopersonas.presentation.login
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.tuapp.bancopersonas.data.mapper.toDomain
+import com.tuapp.bancopersonas.data.remote.AuthApi
+import com.tuapp.bancopersonas.data.remote.dto.LoginRequest
+import com.tuapp.bancopersonas.domain.model.Persona
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+data class LoginUiState(
+    val nombre: String = "",
+    val documento: String = "",
+    val password: String = "",
+    val rol: String = "usuario", // "admin" o "usuario"
+    val cargando: Boolean = false,
+    val error: String? = null
+)
+
+@HiltViewModel
+class LoginViewModel @Inject constructor(
+    private val authApi: AuthApi
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(LoginUiState())
+    val uiState: StateFlow<LoginUiState> = _uiState
+
+    fun onNombreChange(valor: String) = _uiState.update { it.copy(nombre = valor, error = null) }
+    fun onDocumentoChange(valor: String) = _uiState.update { it.copy(documento = valor, error = null) }
+    fun onPasswordChange(valor: String) = _uiState.update { it.copy(password = valor, error = null) }
+    fun onRolChange(valor: String) = _uiState.update { it.copy(rol = valor, error = null) }
+
+    fun login(onSuccess: (String, Persona?) -> Unit) {
+        viewModelScope.launch {
+            val estado = _uiState.value
+            _uiState.update { it.copy(cargando = true, error = null) }
+
+            try {
+                val request = LoginRequest(
+                    rol = estado.rol,
+                    nombre = estado.nombre,
+                    documento = if (estado.rol == "usuario") estado.documento else null,
+                    password = if (estado.rol == "admin") estado.password else null
+                )
+
+                val response = authApi.login(request)
+                
+                if (response.isSuccessful && response.body()?.success == true) {
+                    val body = response.body()!!
+                    val persona = body.persona?.toDomain()
+                    onSuccess(body.rol ?: estado.rol, persona)
+                } else {
+                    val errorMsg = response.body()?.error ?: "Error al iniciar sesión"
+                    _uiState.update { it.copy(error = errorMsg, cargando = false) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "Error de conexión: ${e.message}", cargando = false) }
+            }
+        }
+    }
+}
