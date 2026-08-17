@@ -36,6 +36,12 @@ const editarPersona = async (req, res) => {
     const { id } = req.params;
     const { nombre, documento, telefono, version } = req.body;
     try {
+        // Obtener datos antiguos para el historial
+        const personaAnterior = await pool.query('SELECT * FROM personas WHERE id = $1', [id]);
+        if (personaAnterior.rows.length === 0) return res.status(404).json({ error: 'No encontrada' });
+        
+        const oldData = personaAnterior.rows[0];
+
         const resultado = await pool.query(
             `UPDATE personas
              SET nombre = $1, documento = $2, telefono = $3,
@@ -48,10 +54,48 @@ const editarPersona = async (req, res) => {
             // No actualizó ninguna fila: la versión no coincide = conflicto
             return res.status(409).json({ error: 'Conflicto de versión' });
         }
+
+        // Si los datos realmente cambiaron, guardar en historial
+        if (oldData.nombre !== nombre || oldData.documento !== documento || oldData.telefono !== telefono) {
+            const { randomUUID } = require('crypto');
+            await pool.query(
+                `INSERT INTO historial_cambios (id, persona_id, nombre_anterior, documento_anterior, telefono_anterior)
+                 VALUES ($1, $2, $3, $4, $5)`,
+                [randomUUID(), id, oldData.nombre, oldData.documento, oldData.telefono]
+            );
+
+            // Mantener solo los últimos 3 cambios
+            await pool.query(
+                `DELETE FROM historial_cambios
+                 WHERE persona_id = $1 AND id NOT IN (
+                     SELECT id FROM historial_cambios
+                     WHERE persona_id = $1
+                     ORDER BY creado_en DESC
+                     LIMIT 3
+                 )`,
+                [id]
+            );
+        }
+
         res.json(resultado.rows[0]);
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Error al editar persona' });
+    }
+};
+
+// GET /api/personas/:id/historial — obtiene el historial de una persona
+const obtenerHistorial = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const resultado = await pool.query(
+            'SELECT * FROM historial_cambios WHERE persona_id = $1 ORDER BY creado_en DESC LIMIT 3',
+            [id]
+        );
+        res.json(resultado.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error al obtener historial' });
     }
 };
 
@@ -85,10 +129,46 @@ const obtenerCambios = async (req, res) => {
     }
 };
 
+// GET /api/personas/ganador-semana
+const obtenerGanadorSemana = async (req, res) => {
+    try {
+        const resultado = await pool.query(
+            'SELECT * FROM personas WHERE deleted_at IS NULL ORDER BY id'
+        );
+        
+        const personas = resultado.rows;
+        if (personas.length === 0) {
+            return res.status(404).json({ error: 'No hay participantes' });
+        }
+
+        // Obtener año y semana actual
+        const now = new Date();
+        const start = new Date(now.getFullYear(), 0, 1);
+        const days = Math.floor((now - start) / (24 * 60 * 60 * 1000));
+        const weekNumber = Math.ceil(days / 7);
+        const year = now.getFullYear();
+
+        // Generar un índice pseudo-aleatorio predecible basado en semana y año
+        let seed = (year * 100) + weekNumber;
+        seed = (seed * 9301 + 49297) % 233280;
+        const random = seed / 233280;
+
+        const winnerIndex = Math.floor(random * personas.length);
+        const winner = personas[winnerIndex];
+
+        res.json(winner);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Error al obtener ganador' });
+    }
+};
+
 module.exports = {
     obtenerPersonas,
     crearPersona,
     editarPersona,
     eliminarPersona,
-    obtenerCambios
+    obtenerCambios,
+    obtenerHistorial,
+    obtenerGanadorSemana
 };

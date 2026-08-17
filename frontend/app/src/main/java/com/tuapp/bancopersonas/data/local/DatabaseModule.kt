@@ -2,6 +2,7 @@ package com.tuapp.bancopersonas.data.local
 
 import android.content.Context
 import androidx.room.Room
+import com.tuapp.bancopersonas.data.local.dao.HistorialDao
 import com.tuapp.bancopersonas.data.local.dao.OutboxDao
 import com.tuapp.bancopersonas.data.local.dao.PersonaDao
 import dagger.Module
@@ -22,7 +23,9 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "banco_personas.db"
-        ).build()
+        )
+        .fallbackToDestructiveMigration()
+        .build()
     }
 
     @Provides
@@ -33,5 +36,10 @@ object DatabaseModule {
     @Provides
     fun provideOutboxDao(database: AppDatabase): OutboxDao {
         return database.outboxDao()
+    }
+
+    @Provides
+    fun provideHistorialDao(database: AppDatabase): HistorialDao {
+        return database.historialDao()
     }
 }

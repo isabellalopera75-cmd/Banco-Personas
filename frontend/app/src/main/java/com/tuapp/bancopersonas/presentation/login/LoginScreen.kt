@@ -1,6 +1,11 @@
 package com.tuapp.bancopersonas.presentation.login
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,75 +19,123 @@ import com.tuapp.bancopersonas.domain.model.Persona
 @Composable
 fun LoginScreen(
     onLoginSuccess: (String, Persona?) -> Unit,
+    onRegisterClick: () -> Unit = {},
     viewModel: LoginViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        contentAlignment = Alignment.Center
     ) {
-        Text(text = "Registrocc - Login", style = MaterialTheme.typography.headlineMedium)
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Selector de Rol
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            RadioButton(
-                selected = uiState.rol == "usuario",
-                onClick = { viewModel.onRolChange("usuario") }
-            )
-            Text("Usuario")
-            Spacer(modifier = Modifier.width(16.dp))
-            RadioButton(
-                selected = uiState.rol == "admin",
-                onClick = { viewModel.onRolChange("admin") }
-            )
-            Text("Admin")
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = uiState.nombre,
-            onValueChange = { viewModel.onNombreChange(it) },
-            label = { Text("Nombre") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        if (uiState.rol == "admin") {
-            OutlinedTextField(
-                value = uiState.password,
-                onValueChange = { viewModel.onPasswordChange(it) },
-                label = { Text("Contraseña") },
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth()
-            )
-        } else {
-            OutlinedTextField(
-                value = uiState.documento,
-                onValueChange = { viewModel.onDocumentoChange(it) },
-                label = { Text("Documento") },
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-
-        uiState.error?.let {
-            Text(text = it, color = Color.Red, modifier = Modifier.padding(top = 8.dp))
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        if (uiState.cargando) {
-            CircularProgressIndicator()
-        } else {
-            Button(
-                onClick = { viewModel.login(onLoginSuccess) },
-                modifier = Modifier.fillMaxWidth()
+        ElevatedCard(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
+            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Ingresar")
+                // App Logo
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = "App Logo",
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text(text = "¡Bienvenido a WinPlay!", style = MaterialTheme.typography.headlineMedium)
+                Text(text = "Inicia sesión para ganar", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Selector de Rol usando TabRow
+                val roles = listOf("Usuario", "Admin")
+                val selectedTabIndex = if (uiState.rol == "admin") 1 else 0
+                
+                TabRow(
+                    selectedTabIndex = selectedTabIndex,
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    roles.forEachIndexed { index, title ->
+                        val rolValue = if (index == 0) "usuario" else "admin"
+                        Tab(
+                            selected = selectedTabIndex == index,
+                            onClick = { viewModel.onRolChange(rolValue) },
+                            text = { Text(title) }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = uiState.nombre,
+                    onValueChange = { viewModel.onNombreChange(it) },
+                    label = { Text("Nombre") },
+                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.medium
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+
+                if (uiState.rol == "admin") {
+                    OutlinedTextField(
+                        value = uiState.password,
+                        onValueChange = { viewModel.onPasswordChange(it) },
+                        label = { Text("Contraseña") },
+                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = MaterialTheme.shapes.medium
+                    )
+                } else {
+                    OutlinedTextField(
+                        value = uiState.documento,
+                        onValueChange = { viewModel.onDocumentoChange(it) },
+                        label = { Text("Documento") },
+                        leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = MaterialTheme.shapes.medium
+                    )
+                }
+
+                uiState.error?.let {
+                    Text(text = it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp))
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                if (uiState.cargando) {
+                    CircularProgressIndicator()
+                } else {
+                    Button(
+                        onClick = { viewModel.login(onLoginSuccess) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Text("Ingresar")
+                    }
+                    if (uiState.rol == "usuario") {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TextButton(
+                            onClick = onRegisterClick,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("¿No tienes cuenta? Regístrate aquí")
+                        }
+                    }
+                }
             }
         }
     }

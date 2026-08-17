@@ -27,4 +27,12 @@ interface PersonaApi {
     suspend fun eliminar(
         @Path("id") id: String
     ): Response<Unit>
+
+    @GET("api/personas/{id}/historial")
+    suspend fun obtenerHistorial(
+        @Path("id") id: String
+    ): Response<List<com.tuapp.bancopersonas.data.local.entity.HistorialEntity>>
+
+    @GET("api/personas/ganador-semana")
+    suspend fun getGanadorSemana(): Response<PersonaDto>
 }

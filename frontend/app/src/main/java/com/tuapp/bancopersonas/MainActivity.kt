@@ -23,6 +23,7 @@ import dagger.hilt.android.AndroidEntryPoint
 sealed class Screen {
     object Login : Screen()
     object Admin : Screen()
+    object Register : Screen()
     data class Usuario(val persona: Persona) : Screen()
 }
 
@@ -46,7 +47,15 @@ class MainActivity : ComponentActivity() {
                                         } else {
                                             Screen.Usuario(persona!!)
                                         }
+                                    },
+                                    onRegisterClick = {
+                                        currentScreen = Screen.Register
                                     }
+                                )
+                            }
+                            is Screen.Register -> {
+                                com.tuapp.bancopersonas.presentation.form.PersonaFormScreen(
+                                    onPersonaGuardada = { currentScreen = Screen.Login }
                                 )
                             }
                             is Screen.Admin -> {
@@ -56,7 +65,7 @@ class MainActivity : ComponentActivity() {
                             }
                             is Screen.Usuario -> {
                                 UsuarioScreen(
-                                    persona = screen.persona,
+                                    personaId = screen.persona.id,
                                     onLogout = { currentScreen = Screen.Login }
                                 )
                             }

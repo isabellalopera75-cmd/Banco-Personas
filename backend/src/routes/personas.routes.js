@@ -5,10 +5,14 @@ const {
     crearPersona,
     editarPersona,
     eliminarPersona,
-    obtenerCambios
+    obtenerCambios,
+    obtenerHistorial,
+    obtenerGanadorSemana
 } = require('../controllers/personas.controller');
 
 router.get('/sync', obtenerCambios);
+router.get('/ganador-semana', obtenerGanadorSemana);
+router.get('/:id/historial', obtenerHistorial);
 router.get('/', obtenerPersonas);
 router.post('/', crearPersona);
 router.put('/:id', editarPersona);

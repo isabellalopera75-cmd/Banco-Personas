@@ -1,0 +1,420 @@
+:root {
+    --primary: #FF4B72;
+    --primary-glow: rgba(255, 75, 114, 0.4);
+    --secondary: #6B48FF;
+    --bg-color: #0f0f13;
+    --text-main: #ffffff;
+    --text-muted: #a0a0b0;
+    --glass-bg: rgba(255, 255, 255, 0.03);
+    --glass-border: rgba(255, 255, 255, 0.08);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Outfit', sans-serif;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    overflow-x: hidden;
+    min-height: 100vh;
+}
+
+/* Background Animations */
+.background-blobs {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+    overflow: hidden;
+    filter: blur(100px);
+}
+
+.blob {
+    position: absolute;
+    border-radius: 50%;
+    animation: float 20s infinite alternate;
+}
+
+.blob-1 {
+    width: 500px;
+    height: 500px;
+    background: var(--primary);
+    opacity: 0.15;
+    top: -100px;
+    left: -100px;
+}
+
+.blob-2 {
+    width: 600px;
+    height: 600px;
+    background: var(--secondary);
+    opacity: 0.15;
+    bottom: -200px;
+    right: -100px;
+    animation-delay: -5s;
+}
+
+.blob-3 {
+    width: 300px;
+    height: 300px;
+    background: #00FFC2;
+    opacity: 0.1;
+    top: 40%;
+    left: 50%;
+    animation-delay: -10s;
+}
+
+@keyframes float {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(50px, 50px) scale(1.1); }
+}
+
+/* Navbar */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 5%;
+    background: rgba(15, 15, 19, 0.7);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--glass-border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.logo {
+    font-size: 1.5rem;
+    font-weight: 800;
+    background: linear-gradient(90deg, #fff, var(--primary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.nav-links a {
+    color: var(--text-main);
+    text-decoration: none;
+    margin-left: 2rem;
+    font-weight: 400;
+    transition: color 0.3s ease;
+}
+
+.nav-links a:hover {
+    color: var(--primary);
+}
+
+.nav-btn {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    padding: 0.5rem 1.5rem;
+    border-radius: 50px;
+}
+
+/* Hero Section */
+.hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4rem 5%;
+    min-height: calc(100vh - 80px);
+}
+
+.hero-content {
+    flex: 1;
+    max-width: 600px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 50px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 1.5rem;
+}
+
+h1 {
+    font-size: 4rem;
+    line-height: 1.1;
+    margin-bottom: 1.5rem;
+    font-weight: 800;
+}
+
+h1 span {
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.hero-content p {
+    font-size: 1.2rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 2.5rem;
+}
+
+/* CTA & Buttons */
+.cta-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.download-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 0 10px 20px var(--primary-glow);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.download-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 25px var(--primary-glow);
+}
+
+.platform-note {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.desktop-warning {
+    background: rgba(255, 180, 0, 0.1);
+    border: 1px solid rgba(255, 180, 0, 0.3);
+    color: #ffb400;
+    padding: 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    max-width: 400px;
+    animation: fadeIn 0.5s ease forwards;
+}
+
+.hidden {
+    display: none !important;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Phone Mockup */
+.hero-visual {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+.phone-mockup {
+    width: 320px;
+    height: 650px;
+    background: #000;
+    border-radius: 40px;
+    padding: 10px;
+    position: relative;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.5), 0 0 0 2px #333, inset 0 0 20px rgba(255,255,255,0.1);
+    transform: perspective(1000px) rotateY(-15deg) rotateX(5deg);
+    transition: transform 0.5s ease;
+}
+
+.phone-mockup:hover {
+    transform: perspective(1000px) rotateY(-5deg) rotateX(2deg);
+}
+
+.phone-notch {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 25px;
+    background: #000;
+    border-bottom-left-radius: 15px;
+    border-bottom-right-radius: 15px;
+    z-index: 10;
+}
+
+.phone-screen {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #1e1e24 0%, #151519 100%);
+    border-radius: 32px;
+    overflow: hidden;
+    position: relative;
+}
+
+/* App UI Inside Mockup */
+.app-ui {
+    padding: 2rem 1.5rem;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-header {
+    margin-top: 2rem;
+    text-align: center;
+    margin-bottom: 2.5rem;
+}
+
+.app-header h2 {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+}
+
+.app-header p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.app-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+}
+
+.input-group label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 0.4rem;
+}
+
+.input-group input {
+    width: 100%;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    padding: 1rem;
+    border-radius: 10px;
+    color: white;
+}
+
+.app-btn-primary {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 1rem;
+    border-radius: 10px;
+    font-weight: 600;
+    margin-top: 1rem;
+}
+
+.app-register-link {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 1rem;
+}
+
+.app-register-link span {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+
+
+/* Features Section */
+.features-section {
+    padding: 6rem 5%;
+    background: linear-gradient(180deg, var(--bg-color) 0%, rgba(30,30,36,0.5) 100%);
+    position: relative;
+    z-index: 10;
+}
+
+.section-title {
+    text-align: center;
+    margin-bottom: 4rem;
+}
+
+.section-title h2 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    background: linear-gradient(90deg, #fff, var(--primary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.section-title p {
+    color: var(--text-muted);
+    font-size: 1.1rem;
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.feature-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    padding: 2.5rem 2rem;
+    border-radius: 24px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    text-align: center;
+}
+
+.feature-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 30px rgba(255, 75, 114, 0.15);
+    border-color: rgba(255, 75, 114, 0.3);
+}
+
+.feature-icon {
+    font-size: 3rem;
+    margin-bottom: 1.5rem;
+}
+
+.feature-card h3 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: #fff;
+}
+
+.feature-card p {
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .hero {
+        flex-direction: column;
+        text-align: center;
+        padding-top: 2rem;
+    }
+    
+    .cta-container {
+        align-items: center;
+    }
+    
+    .hero-visual {
+        margin-top: 4rem;
+    }
+    
+    h1 {
+        font-size: 3rem;
+    }
+}

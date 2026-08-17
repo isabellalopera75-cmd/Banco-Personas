@@ -15,6 +15,9 @@ interface PersonaDao {
     @Query("SELECT * FROM personas WHERE id = :id")
     suspend fun obtenerPorId(id: String): PersonaEntity?
 
+    @Query("SELECT * FROM personas WHERE nombre = :nombre AND documento = :documento AND deletedAt IS NULL LIMIT 1")
+    suspend fun loginOffline(nombre: String, documento: String): PersonaEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun guardar(persona: PersonaEntity)
 
