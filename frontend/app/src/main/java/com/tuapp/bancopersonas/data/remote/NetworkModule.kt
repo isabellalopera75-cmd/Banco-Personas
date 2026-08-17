@@ -16,7 +16,7 @@ object NetworkModule {
     // Cambia esta URL por la IP real de tu PC cuando pruebes desde el celular físico
     // Para el emulador: http://10.0.2.2:3000/
     // Para celular físico en la misma red WiFi: http://192.168.X.X:3000/
-    private const val BASE_URL = "https://api.winplay.isita.online/"
+    private const val BASE_URL = "https://api.isita.online/"
 
     @Provides
     @Singleton
