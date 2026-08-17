@@ -97,12 +97,20 @@ body {
     -webkit-text-fill-color: transparent;
 }
 
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
 .nav-links a {
     color: var(--text-main);
     text-decoration: none;
-    margin-left: 2rem;
     font-weight: 400;
     transition: color 0.3s ease;
+    white-space: nowrap;
 }
 
 .nav-links a:hover {
@@ -400,6 +408,17 @@ h1 span {
 
 /* Responsive */
 @media (max-width: 900px) {
+    .navbar {
+        flex-wrap: wrap;
+        gap: 1rem;
+        justify-content: center;
+    }
+    
+    .nav-links {
+        gap: 1rem;
+        justify-content: center;
+    }
+
     .hero {
         flex-direction: column;
         text-align: center;
