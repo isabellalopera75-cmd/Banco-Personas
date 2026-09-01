@@ -7,7 +7,7 @@ import javax.inject.Inject
 class CrearPersonaUseCase @Inject constructor(
     private val repository: PersonaRepository
 ) {
-    suspend operator fun invoke(persona: Persona) {
-        repository.crearPersona(persona)
+    suspend operator fun invoke(persona: Persona, password: String) {
+        repository.crearPersona(persona, password)
     }
 }

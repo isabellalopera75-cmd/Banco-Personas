@@ -1,6 +1,5 @@
 package com.tuapp.bancopersonas.presentation.form
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tuapp.bancopersonas.domain.model.Persona
@@ -19,8 +18,11 @@ data class PersonaFormUiState(
     val nombre: String = "",
     val documento: String = "",
     val telefono: String = "",
+    val password: String = "",
+    val confirmacion: String = "",
     val version: Int = 1,
-    val esEdicion: Boolean = false
+    val esEdicion: Boolean = false,
+    val error: String? = null
 )
 
 @HiltViewModel
@@ -47,37 +49,54 @@ class PersonaFormViewModel @Inject constructor(
         }
     }
 
-    fun actualizarNombre(valor: String) {
-        _uiState.update { it.copy(nombre = valor) }
-    }
+    fun actualizarNombre(valor: String) = _uiState.update { it.copy(nombre = valor, error = null) }
+    fun actualizarDocumento(valor: String) = _uiState.update { it.copy(documento = valor, error = null) }
+    fun actualizarTelefono(valor: String) = _uiState.update { it.copy(telefono = valor, error = null) }
+    fun actualizarPassword(valor: String) = _uiState.update { it.copy(password = valor, error = null) }
+    fun actualizarConfirmacion(valor: String) = _uiState.update { it.copy(confirmacion = valor, error = null) }
 
-    fun actualizarDocumento(valor: String) {
-        _uiState.update { it.copy(documento = valor) }
-    }
-
-    fun actualizarTelefono(valor: String) {
-        _uiState.update { it.copy(telefono = valor) }
-    }
-
-    // Ahora recibe directamente qué hacer al terminar, en vez de "avisar" con una bandera
     fun guardar(onExito: () -> Unit) {
-        Log.d("SYNC_DEBUG", "ViewModel: Intentando guardar. esEdicion=${_uiState.value.esEdicion}")
+        val estado = _uiState.value
+
+        // El alta crea una cuenta, así que valida contraseña. La edición no
+        // toca credenciales, por eso solo se controla al registrar.
+        if (!estado.esEdicion) {
+            validarPassword(estado)?.let { mensaje ->
+                _uiState.update { it.copy(error = mensaje) }
+                return
+            }
+        }
+
         viewModelScope.launch {
-            val estado = _uiState.value
             val persona = Persona(
                 id = estado.id,
-                nombre = estado.nombre,
-                documento = estado.documento,
-                telefono = estado.telefono,
+                nombre = estado.nombre.trim(),
+                documento = estado.documento.trim(),
+                telefono = estado.telefono.trim(),
                 version = estado.version,
                 syncStatus = SyncStatus.PENDING
             )
+
             if (estado.esEdicion) {
                 editarPersonaUseCase(persona)
             } else {
-                crearPersonaUseCase(persona)
+                crearPersonaUseCase(persona, estado.password)
             }
             onExito()
         }
+    }
+
+    private fun validarPassword(estado: PersonaFormUiState): String? = when {
+        // El mismo mínimo que valida el servidor: si difieren, el usuario
+        // recibiría un rechazo recién al sincronizar, sin entender por qué.
+        estado.password.length < LARGO_MINIMO_PASSWORD ->
+            "La contraseña debe tener al menos $LARGO_MINIMO_PASSWORD caracteres"
+        estado.password != estado.confirmacion ->
+            "Las contraseñas no coinciden"
+        else -> null
+    }
+
+    private companion object {
+        const val LARGO_MINIMO_PASSWORD = 8
     }
 }

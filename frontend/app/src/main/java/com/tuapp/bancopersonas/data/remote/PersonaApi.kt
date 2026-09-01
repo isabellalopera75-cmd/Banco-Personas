@@ -7,15 +7,13 @@ import com.tuapp.bancopersonas.data.remote.dto.PersonaDto
 
 interface PersonaApi {
 
-    @GET("api/personas")
+    // El alta NO vive acá: es pública y va por AuthApi.register, porque
+    // quien se registra todavía no tiene token para llamar a este router.
+
+    @GET("api/personas/sync")
     suspend fun obtenerCambios(
         @Query("since") since: String
     ): Response<List<PersonaDto>>
-
-    @POST("api/personas")
-    suspend fun crear(
-        @Body body: RequestBody
-    ): Response<PersonaDto>
 
     @PUT("api/personas/{id}")
     suspend fun actualizar(

@@ -1,0 +1,55 @@
+# Despliegue completo: base de datos, API y landing.
+#
+# Se levanta pasando el archivo de entorno explícitamente, para que exista una
+# sola fuente de verdad de las credenciales:
+#
+#   docker compose --env-file backend/.env up -d --build
+#
+# Sin --env-file, Compose busca un .env en esta carpeta y las variables quedan
+# vacías: la API no arranca y lo dice con un error claro.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - datos_postgres:/var/lib/postgresql/data
+      # El esquema se crea solo la primera vez, cuando el volumen está vacío.
+      - ./backend/db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${DB_USER} -d $${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    env_file: ./backend/.env
+    environment:
+      # Estas dos sobrescriben lo que venga del .env y son la corrección del
+      # bug que tenía el despliegue: dentro de un contenedor, "localhost" es
+      # el propio contenedor, no el host ni la base. El host correcto es el
+      # nombre del servicio de Compose.
+      DB_HOST: db
+      DB_PORT: 5432
+    depends_on:
+      db:
+        # No arranca hasta que Postgres acepta conexiones. Sin esto, la API
+        # gana la carrera al inicio y falla contra una base que todavía no está.
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+
+  landing:
+    build: ./landing-page
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+
+volumes:
+  datos_postgres:

@@ -15,13 +15,16 @@ interface PersonaDao {
     @Query("SELECT * FROM personas WHERE id = :id")
     suspend fun obtenerPorId(id: String): PersonaEntity?
 
-    @Query("SELECT * FROM personas WHERE nombre = :nombre AND documento = :documento AND deletedAt IS NULL LIMIT 1")
-    suspend fun loginOffline(nombre: String, documento: String): PersonaEntity?
+    @Query("SELECT * FROM personas WHERE documento = :documento AND deletedAt IS NULL LIMIT 1")
+    suspend fun obtenerPorDocumento(documento: String): PersonaEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun guardar(persona: PersonaEntity)
 
-    @Query("UPDATE personas SET deletedAt = :deletedAt WHERE id = :id")
+    // Marca la baja como PENDING: si quedara en SYNCED, la fase de descarga
+    // volvería a traer el registro del servidor y lo resucitaría antes de que
+    // la outbox llegue a enviar el DELETE.
+    @Query("UPDATE personas SET deletedAt = :deletedAt, syncStatus = 'PENDING' WHERE id = :id")
     suspend fun marcarComoEliminado(id: String, deletedAt: Long)
 
     @Query("DELETE FROM personas WHERE id = :id")

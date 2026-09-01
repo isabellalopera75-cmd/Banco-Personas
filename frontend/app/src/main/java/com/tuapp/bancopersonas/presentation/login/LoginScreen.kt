@@ -1,6 +1,7 @@
 package com.tuapp.bancopersonas.presentation.login
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Badge
@@ -11,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -75,25 +77,12 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                OutlinedTextField(
-                    value = uiState.nombre,
-                    onValueChange = { viewModel.onNombreChange(it) },
-                    label = { Text("Nombre") },
-                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = MaterialTheme.shapes.medium
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-
                 if (uiState.rol == "admin") {
                     OutlinedTextField(
-                        value = uiState.password,
-                        onValueChange = { viewModel.onPasswordChange(it) },
-                        label = { Text("Contraseña") },
-                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                        visualTransformation = PasswordVisualTransformation(),
+                        value = uiState.nombre,
+                        onValueChange = { viewModel.onNombreChange(it) },
+                        label = { Text("Usuario") },
+                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         shape = MaterialTheme.shapes.medium
@@ -106,9 +95,27 @@ fun LoginScreen(
                         leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        shape = MaterialTheme.shapes.medium
+                        shape = MaterialTheme.shapes.medium,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                 }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // La contraseña es obligatoria para ambos roles: el ingreso por
+                // nombre y documento permitía entrar a la cuenta de cualquiera
+                // con datos que ya eran públicos en el listado.
+                OutlinedTextField(
+                    value = uiState.password,
+                    onValueChange = { viewModel.onPasswordChange(it) },
+                    label = { Text("Contraseña") },
+                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.medium
+                )
 
                 uiState.error?.let {
                     Text(text = it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp))

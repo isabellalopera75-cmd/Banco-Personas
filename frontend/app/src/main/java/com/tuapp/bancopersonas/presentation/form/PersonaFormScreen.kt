@@ -8,6 +8,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Save
@@ -20,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -145,6 +147,44 @@ fun PersonaFormScreen(
                         colors = textFieldColors,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
                     )
+
+                    // Solo al registrar: la edición de datos no toca credenciales.
+                    if (!uiState.esEdicion) {
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        OutlinedTextField(
+                            value = uiState.password,
+                            onValueChange = { viewModel.actualizarPassword(it) },
+                            label = { Text("Contraseña") },
+                            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                            visualTransformation = PasswordVisualTransformation(),
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = textFieldColors,
+                            supportingText = { Text("Mínimo 8 caracteres", color = Color.Gray) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        OutlinedTextField(
+                            value = uiState.confirmacion,
+                            onValueChange = { viewModel.actualizarConfirmacion(it) },
+                            label = { Text("Repetir Contraseña") },
+                            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                            visualTransformation = PasswordVisualTransformation(),
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = textFieldColors,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+                        )
+                    }
+
+                    uiState.error?.let { mensaje ->
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(text = mensaje, color = MaterialTheme.colorScheme.error)
+                    }
                 }
             }
             
@@ -164,7 +204,9 @@ fun PersonaFormScreen(
                     .fillMaxWidth()
                     .height(60.dp)
                     .shadow(8.dp, RoundedCornerShape(30.dp), ambientColor = WinPlayPink, spotColor = WinPlayPink),
-                enabled = uiState.nombre.isNotBlank() && uiState.documento.isNotBlank(),
+                enabled = uiState.nombre.isNotBlank() && uiState.documento.isNotBlank() &&
+                    (uiState.esEdicion ||
+                        (uiState.password.isNotBlank() && uiState.confirmacion.isNotBlank())),
                 shape = RoundedCornerShape(30.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = WinPlayPink,

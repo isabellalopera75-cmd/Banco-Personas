@@ -1,21 +1,33 @@
 const express = require('express');
 const router = express.Router();
 const {
+    verificarToken,
+    requerirAdmin,
+    requerirPropietarioOAdmin,
+} = require('../middleware/auth.middleware');
+const {
     obtenerPersonas,
-    crearPersona,
     editarPersona,
     eliminarPersona,
     obtenerCambios,
     obtenerHistorial,
-    obtenerGanadorSemana
+    obtenerGanadorSemana,
 } = require('../controllers/personas.controller');
 
+// Ninguna ruta de este router es pública: todas exigen un token válido.
+// El alta de participantes vive en /api/auth/register, que sí es pública.
+router.use(verificarToken);
+
+// Disponibles para cualquier sesión autenticada.
 router.get('/sync', obtenerCambios);
 router.get('/ganador-semana', obtenerGanadorSemana);
-router.get('/:id/historial', obtenerHistorial);
-router.get('/', obtenerPersonas);
-router.post('/', crearPersona);
-router.put('/:id', editarPersona);
-router.delete('/:id', eliminarPersona);
+
+// Solo el propio participante o el administrador.
+router.get('/:id/historial', requerirPropietarioOAdmin, obtenerHistorial);
+router.put('/:id', requerirPropietarioOAdmin, editarPersona);
+
+// Solo el administrador.
+router.get('/', requerirAdmin, obtenerPersonas);
+router.delete('/:id', requerirAdmin, eliminarPersona);
 
 module.exports = router;

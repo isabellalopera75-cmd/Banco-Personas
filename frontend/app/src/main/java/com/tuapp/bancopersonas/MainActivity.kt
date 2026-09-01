@@ -13,12 +13,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.tuapp.bancopersonas.data.local.SessionManager
 import com.tuapp.bancopersonas.domain.model.Persona
 import com.tuapp.bancopersonas.presentation.list.PersonaListScreen
 import com.tuapp.bancopersonas.presentation.login.LoginScreen
 import com.tuapp.bancopersonas.presentation.usuario.UsuarioScreen
 import com.tuapp.bancopersonas.ui.theme.RegistroccTheme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 sealed class Screen {
     object Login : Screen()
@@ -29,6 +31,10 @@ sealed class Screen {
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var sessionManager: SessionManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -60,13 +66,23 @@ class MainActivity : ComponentActivity() {
                             }
                             is Screen.Admin -> {
                                 PersonaListScreen(
-                                    onLogout = { currentScreen = Screen.Login }
+                                    onLogout = {
+                                        // El token tiene que morir con la sesión:
+                                        // si no, queda válido en el dispositivo.
+                                        sessionManager.cerrarSesion()
+                                        currentScreen = Screen.Login
+                                    }
                                 )
                             }
                             is Screen.Usuario -> {
                                 UsuarioScreen(
                                     personaId = screen.persona.id,
-                                    onLogout = { currentScreen = Screen.Login }
+                                    onLogout = {
+                                        // El token tiene que morir con la sesión:
+                                        // si no, queda válido en el dispositivo.
+                                        sessionManager.cerrarSesion()
+                                        currentScreen = Screen.Login
+                                    }
                                 )
                             }
                         }

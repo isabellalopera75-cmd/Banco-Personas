@@ -7,21 +7,25 @@ import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    // Cambia esta URL por la IP real de tu PC cuando pruebes desde el celular físico
-    // Para el emulador: http://10.0.2.2:3000/
-    // Para celular físico en la misma red WiFi: http://192.168.X.X:3000/
     private const val BASE_URL = "https://api.isita.online/"
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient {
+    fun provideOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient {
         return OkHttpClient.Builder()
+            .addInterceptor(authInterceptor)
+            // Sin timeouts explícitos, una red móvil lenta deja la
+            // sincronización colgada con los valores por defecto.
+            .connectTimeout(20, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
             .build()
     }
 
