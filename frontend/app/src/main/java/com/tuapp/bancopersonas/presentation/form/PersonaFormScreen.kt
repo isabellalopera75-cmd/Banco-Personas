@@ -1,9 +1,15 @@
 package com.tuapp.bancopersonas.presentation.form
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -11,25 +17,34 @@ import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.tuapp.bancopersonas.domain.model.Persona
-import com.tuapp.bancopersonas.ui.theme.WinPlayPink
-import com.tuapp.bancopersonas.ui.theme.WinPlaySurface
+import com.tuapp.bancopersonas.ui.components.CampoTexto
+import com.tuapp.bancopersonas.ui.components.MensajeError
+import com.tuapp.bancopersonas.ui.components.PantallaConTeclado
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonaFormScreen(
     personaExistente: Persona? = null,
@@ -37,192 +52,164 @@ fun PersonaFormScreen(
     viewModel: PersonaFormViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val focusManager = LocalFocusManager.current
+    val teclado = LocalSoftwareKeyboardController.current
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.iniciarFormulario(personaExistente)
     }
 
-    Scaffold(
-        containerColor = Color.Black
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+    val siguiente = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
+
+    val guardar = {
+        teclado?.hide()
+        focusManager.clearFocus()
+        viewModel.guardar(onExito = {
+            val mensaje = if (uiState.esEdicion) {
+                "Cambios guardados"
+            } else {
+                "¡Listo! Ya podés iniciar sesión"
+            }
+            android.widget.Toast.makeText(context, mensaje, android.widget.Toast.LENGTH_SHORT).show()
+            onPersonaGuardada()
+        })
+    }
+
+    val puedeGuardar = uiState.nombre.isNotBlank() && uiState.documento.isNotBlank() &&
+        (uiState.esEdicion || (uiState.password.isNotBlank() && uiState.confirmacion.isNotBlank()))
+
+    PantallaConTeclado { anchoCompleto ->
+        Row(
+            modifier = anchoCompleto.padding(bottom = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Custom Top Bar
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 24.dp, top = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = onPersonaGuardada,
-                    modifier = Modifier
-                        .background(WinPlaySurface, CircleShape)
-                        .size(48.dp)
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = Color.White)
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                Text(
-                    text = if (uiState.esEdicion) "Editar Participante" else "Nuevo Participante",
-                    color = Color.White,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold
+            IconButton(onClick = onPersonaGuardada) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Volver",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            Text(
+                text = if (uiState.esEdicion) "Editar participante" else "Nuevo participante",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+        }
 
-            ElevatedCard(
+        Card(
+            modifier = anchoCompleto,
+            shape = MaterialTheme.shapes.large,
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(16.dp, RoundedCornerShape(24.dp), ambientColor = WinPlayPink, spotColor = WinPlayPink),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.elevatedCardColors(containerColor = WinPlaySurface),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 8.dp)
+                    .padding(horizontal = 18.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp)
-                ) {
-                    Text(
-                        text = "Datos del Participante",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = WinPlayPink,
-                        modifier = Modifier.padding(bottom = 24.dp)
-                    )
+                CampoTexto(
+                    valor = uiState.nombre,
+                    onValorCambia = viewModel::actualizarNombre,
+                    etiqueta = "Nombre completo",
+                    icono = Icons.Default.Person,
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Words,
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = siguiente
+                )
 
-                    val textFieldColors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFF1E1E24),
-                        unfocusedContainerColor = Color(0xFF1E1E24),
-                        focusedBorderColor = WinPlayPink,
-                        unfocusedBorderColor = Color.Transparent,
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedLabelColor = WinPlayPink,
-                        unfocusedLabelColor = Color.Gray,
-                        focusedLeadingIconColor = WinPlayPink,
-                        unfocusedLeadingIconColor = Color.Gray
-                    )
+                CampoTexto(
+                    valor = uiState.documento,
+                    onValorCambia = viewModel::actualizarDocumento,
+                    etiqueta = "Documento",
+                    icono = Icons.Default.Badge,
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Next
+                    ),
+                    keyboardActions = siguiente
+                )
 
-                    OutlinedTextField(
-                        value = uiState.nombre,
-                        onValueChange = { viewModel.actualizarNombre(it) },
-                        label = { Text("Nombre Completo") },
-                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                CampoTexto(
+                    valor = uiState.telefono,
+                    onValorCambia = viewModel::actualizarTelefono,
+                    etiqueta = "Teléfono",
+                    icono = Icons.Default.Phone,
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Phone,
+                        imeAction = if (uiState.esEdicion) ImeAction.Done else ImeAction.Next
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onNext = { focusManager.moveFocus(FocusDirection.Down) },
+                        onDone = { if (uiState.esEdicion) guardar() }
+                    )
+                )
+
+                // Solo al registrar: la edición de datos no toca credenciales.
+                if (!uiState.esEdicion) {
+                    CampoTexto(
+                        valor = uiState.password,
+                        onValorCambia = viewModel::actualizarPassword,
+                        etiqueta = "Contraseña",
+                        icono = Icons.Default.Lock,
+                        esPassword = true,
+                        textoAyuda = "Mínimo 8 caracteres",
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
-                        colors = textFieldColors,
-                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words)
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            imeAction = ImeAction.Next
+                        ),
+                        keyboardActions = siguiente
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
 
-                    OutlinedTextField(
-                        value = uiState.documento,
-                        onValueChange = { viewModel.actualizarDocumento(it) },
-                        label = { Text("Documento de Identidad") },
-                        leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null) },
+                    CampoTexto(
+                        valor = uiState.confirmacion,
+                        onValorCambia = viewModel::actualizarConfirmacion,
+                        etiqueta = "Repetir contraseña",
+                        icono = Icons.Default.Lock,
+                        esPassword = true,
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
-                        colors = textFieldColors,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(onDone = { guardar() })
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                }
 
-                    OutlinedTextField(
-                        value = uiState.telefono,
-                        onValueChange = { viewModel.actualizarTelefono(it) },
-                        label = { Text("Teléfono de Contacto") },
-                        leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
-                        colors = textFieldColors,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
+                AnimatedVisibility(visible = uiState.error != null) {
+                    MensajeError(
+                        mensaje = uiState.error.orEmpty(),
+                        modifier = Modifier.fillMaxWidth()
                     )
-
-                    // Solo al registrar: la edición de datos no toca credenciales.
-                    if (!uiState.esEdicion) {
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        OutlinedTextField(
-                            value = uiState.password,
-                            onValueChange = { viewModel.actualizarPassword(it) },
-                            label = { Text("Contraseña") },
-                            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                            visualTransformation = PasswordVisualTransformation(),
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                            colors = textFieldColors,
-                            supportingText = { Text("Mínimo 8 caracteres", color = Color.Gray) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        OutlinedTextField(
-                            value = uiState.confirmacion,
-                            onValueChange = { viewModel.actualizarConfirmacion(it) },
-                            label = { Text("Repetir Contraseña") },
-                            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                            visualTransformation = PasswordVisualTransformation(),
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                            colors = textFieldColors,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
-                        )
-                    }
-
-                    uiState.error?.let { mensaje ->
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(text = mensaje, color = MaterialTheme.colorScheme.error)
-                    }
                 }
             }
-            
-            Spacer(modifier = Modifier.height(40.dp))
+        }
 
-            val context = androidx.compose.ui.platform.LocalContext.current
-
-            Button(
-                onClick = {
-                    viewModel.guardar(onExito = {
-                        val mensaje = if (uiState.esEdicion) "Cambios guardados exitosamente" else "¡Registro exitoso! Ya puedes iniciar sesión"
-                        android.widget.Toast.makeText(context, mensaje, android.widget.Toast.LENGTH_SHORT).show()
-                        onPersonaGuardada()
-                    })
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp)
-                    .shadow(8.dp, RoundedCornerShape(30.dp), ambientColor = WinPlayPink, spotColor = WinPlayPink),
-                enabled = uiState.nombre.isNotBlank() && uiState.documento.isNotBlank() &&
-                    (uiState.esEdicion ||
-                        (uiState.password.isNotBlank() && uiState.confirmacion.isNotBlank())),
-                shape = RoundedCornerShape(30.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = WinPlayPink,
-                    contentColor = Color.White,
-                    disabledContainerColor = Color(0xFF550011),
-                    disabledContentColor = Color.Gray
-                )
-            ) {
-                Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(24.dp))
-                Spacer(modifier = Modifier.width(12.dp))
+        Button(
+            onClick = guardar,
+            enabled = puedeGuardar,
+            modifier = anchoCompleto
+                .padding(top = 16.dp)
+                .height(50.dp),
+            shape = MaterialTheme.shapes.small
+        ) {
+            Box(contentAlignment = Alignment.Center) {
                 Text(
-                    text = if (uiState.esEdicion) "Guardar Cambios" else "Registrar Participante",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
+                    text = if (uiState.esEdicion) "Guardar cambios" else "Crear cuenta",
+                    fontWeight = FontWeight.SemiBold
                 )
             }
         }
+
+        Box(modifier = Modifier.size(8.dp))
     }
 }

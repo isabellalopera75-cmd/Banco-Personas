@@ -1,23 +1,49 @@
 package com.tuapp.bancopersonas.presentation.login
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.tuapp.bancopersonas.domain.model.Persona
+import com.tuapp.bancopersonas.ui.components.CampoTexto
+import com.tuapp.bancopersonas.ui.components.MensajeError
+import com.tuapp.bancopersonas.ui.components.PantallaConTeclado
 
 @Composable
 fun LoginScreen(
@@ -26,132 +52,175 @@ fun LoginScreen(
     viewModel: LoginViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val focusManager = LocalFocusManager.current
+    val teclado = LocalSoftwareKeyboardController.current
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        ElevatedCard(
-            modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
-            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+    val esAdmin = uiState.rol == "admin"
+
+    val ingresar = {
+        // Se baja el teclado antes de enviar. Si no, tapa el mensaje de error
+        // que aparece justo debajo del formulario.
+        teclado?.hide()
+        focusManager.clearFocus()
+        viewModel.login(onLoginSuccess)
+    }
+
+    PantallaConTeclado { anchoCompleto ->
+        Icon(
+            imageVector = Icons.Default.Star,
+            contentDescription = null,
+            modifier = Modifier.size(44.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+
+        Text(
+            text = "WinPlay",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+        Text(
+            text = "Iniciá sesión para participar",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 2.dp, bottom = 20.dp)
+        )
+
+        Card(
+            modifier = anchoCompleto,
+            shape = MaterialTheme.shapes.large,
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(horizontal = 18.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // App Logo
-                Icon(
-                    imageVector = Icons.Default.Star,
-                    contentDescription = "App Logo",
-                    modifier = Modifier.size(64.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Text(text = "¡Bienvenido a WinPlay!", style = MaterialTheme.typography.headlineMedium)
-                Text(text = "Inicia sesión para ganar", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Selector de Rol usando TabRow
-                val roles = listOf("Usuario", "Admin")
-                val selectedTabIndex = if (uiState.rol == "admin") 1 else 0
-                
                 TabRow(
-                    selectedTabIndex = selectedTabIndex,
+                    selectedTabIndex = if (esAdmin) 1 else 0,
                     containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    modifier = Modifier.fillMaxWidth()
+                    contentColor = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.small)
                 ) {
-                    roles.forEachIndexed { index, title ->
-                        val rolValue = if (index == 0) "usuario" else "admin"
-                        Tab(
-                            selected = selectedTabIndex == index,
-                            onClick = { viewModel.onRolChange(rolValue) },
-                            text = { Text(title) }
-                        )
-                    }
+                    listOf("Participante" to "usuario", "Administrador" to "admin")
+                        .forEachIndexed { indice, (titulo, valor) ->
+                            Tab(
+                                selected = (indice == 1) == esAdmin,
+                                onClick = {
+                                    focusManager.clearFocus()
+                                    viewModel.onRolChange(valor)
+                                },
+                                // Sin estos dos, ambas pestañas heredan el
+                                // color de marca y no se distingue cuál está
+                                // activa más que por la línea de abajo.
+                                selectedContentColor = MaterialTheme.colorScheme.primary,
+                                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                text = {
+                                    Text(titulo, style = MaterialTheme.typography.labelLarge)
+                                }
+                            )
+                        }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                if (uiState.rol == "admin") {
-                    OutlinedTextField(
-                        value = uiState.nombre,
-                        onValueChange = { viewModel.onNombreChange(it) },
-                        label = { Text("Usuario") },
-                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                if (esAdmin) {
+                    CampoTexto(
+                        valor = uiState.nombre,
+                        onValorCambia = viewModel::onNombreChange,
+                        etiqueta = "Usuario",
+                        icono = Icons.Default.Person,
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        shape = MaterialTheme.shapes.medium,
                         // Sin esto el teclado escribe "Admin" con mayúscula, y
-                        // el servidor compara el usuario con igualdad estricta:
-                        // la contraseña podía ser correcta y el acceso fallaba
+                        // el servidor compara con igualdad estricta: la
+                        // contraseña podía ser correcta y el acceso fallaba
                         // igual, sin ninguna pista de por qué.
                         keyboardOptions = KeyboardOptions(
                             capitalization = KeyboardCapitalization.None,
-                            autoCorrectEnabled = false
+                            autoCorrectEnabled = false,
+                            imeAction = ImeAction.Next
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onNext = { focusManager.moveFocus(FocusDirection.Down) }
                         )
                     )
                 } else {
-                    OutlinedTextField(
-                        value = uiState.documento,
-                        onValueChange = { viewModel.onDocumentoChange(it) },
-                        label = { Text("Documento") },
-                        leadingIcon = { Icon(Icons.Default.Badge, contentDescription = null) },
+                    CampoTexto(
+                        valor = uiState.documento,
+                        onValorCambia = viewModel::onDocumentoChange,
+                        etiqueta = "Documento",
+                        icono = Icons.Default.Badge,
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        shape = MaterialTheme.shapes.medium,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Next
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                        )
                     )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // La contraseña es obligatoria para ambos roles: el ingreso por
-                // nombre y documento permitía entrar a la cuenta de cualquiera
-                // con datos que ya eran públicos en el listado.
-                OutlinedTextField(
-                    value = uiState.password,
-                    onValueChange = { viewModel.onPasswordChange(it) },
-                    label = { Text("Contraseña") },
-                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                CampoTexto(
+                    valor = uiState.password,
+                    onValorCambia = viewModel::onPasswordChange,
+                    etiqueta = "Contraseña",
+                    icono = Icons.Default.Lock,
+                    esPassword = true,
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = MaterialTheme.shapes.medium
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { ingresar() })
                 )
 
-                uiState.error?.let {
-                    Text(text = it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp))
+                AnimatedVisibility(visible = uiState.error != null) {
+                    MensajeError(
+                        mensaje = uiState.error.orEmpty(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                if (uiState.cargando) {
-                    CircularProgressIndicator()
-                } else {
-                    Button(
-                        onClick = { viewModel.login(onLoginSuccess) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.medium
-                    ) {
-                        Text("Ingresar")
-                    }
-                    if (uiState.rol == "usuario") {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        TextButton(
-                            onClick = onRegisterClick,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("¿No tienes cuenta? Regístrate aquí")
+                Button(
+                    onClick = ingresar,
+                    enabled = !uiState.cargando,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                        .padding(top = 4.dp),
+                    shape = MaterialTheme.shapes.small
+                ) {
+                    // El indicador reemplaza el texto dentro del mismo botón.
+                    // Antes sustituía al botón entero y el formulario daba un
+                    // salto en cada intento.
+                    Box(contentAlignment = Alignment.Center) {
+                        if (uiState.cargando) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        } else {
+                            Text("Ingresar", fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
+            }
+        }
+
+        if (!esAdmin) {
+            TextButton(
+                onClick = onRegisterClick,
+                enabled = !uiState.cargando,
+                modifier = Modifier.padding(top = 4.dp)
+            ) {
+                Text(
+                    text = "¿No tenés cuenta? Registrate",
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
         }
     }
