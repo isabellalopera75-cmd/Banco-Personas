@@ -44,7 +44,13 @@ class LoginViewModel @Inject constructor(
     fun onRolChange(valor: String) = _uiState.update { it.copy(rol = valor, error = null) }
 
     fun login(onSuccess: (String, Persona?) -> Unit) {
-        val estado = _uiState.value
+        // Se recortan los espacios antes de cualquier otra cosa. El servidor
+        // compara el usuario de administración con igualdad estricta, así que
+        // un espacio invisible al final —que los teclados agregan solos al
+        // autocompletar— alcanzaba para rechazar credenciales correctas.
+        val estado = _uiState.value.let {
+            it.copy(nombre = it.nombre.trim(), documento = it.documento.trim())
+        }
 
         validar(estado)?.let { mensaje ->
             _uiState.update { it.copy(error = mensaje) }
