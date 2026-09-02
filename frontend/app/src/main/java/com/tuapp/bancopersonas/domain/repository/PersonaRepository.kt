@@ -7,6 +7,13 @@ import kotlinx.coroutines.flow.Flow
 interface PersonaRepository {
     fun observarPersonas(): Flow<List<Persona>>
 
+    /**
+     * Devuelve el participante activo que tiene ese documento, o null si está
+     * libre. Permite detectar un documento repetido antes de encolar el
+     * cambio, en vez de descubrirlo cuando el servidor lo rechaza.
+     */
+    suspend fun buscarPorDocumento(documento: String): Persona?
+
     /** El alta crea una cuenta, así que exige contraseña. */
     suspend fun crearPersona(persona: Persona, password: String)
 

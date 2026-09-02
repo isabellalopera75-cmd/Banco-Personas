@@ -36,6 +36,9 @@ class PersonaRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun buscarPorDocumento(documento: String): Persona? =
+        personaDao.obtenerPorDocumento(documento)?.toDomain()
+
     override suspend fun crearPersona(persona: Persona, password: String) {
         val nuevaPersona = persona.copy(id = UUID.randomUUID().toString(), version = 1)
         val entity = nuevaPersona.toEntity()

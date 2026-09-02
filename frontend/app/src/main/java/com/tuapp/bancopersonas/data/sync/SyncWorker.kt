@@ -13,6 +13,7 @@ import com.tuapp.bancopersonas.data.local.entity.OutboxEntity
 import com.tuapp.bancopersonas.data.mapper.toEntity
 import com.tuapp.bancopersonas.data.remote.AuthApi
 import com.tuapp.bancopersonas.data.remote.PersonaApi
+import com.tuapp.bancopersonas.data.remote.dto.ErrorApiDto
 import com.tuapp.bancopersonas.data.remote.dto.RegisterRequest
 import com.tuapp.bancopersonas.data.remote.dto.RegistroPendiente
 import dagger.assisted.Assisted
@@ -70,7 +71,7 @@ class SyncWorker @AssistedInject constructor(
                         break
                     }
 
-                    409 -> resolverConflicto(operacion)
+                    409 -> resolverConflicto(operacion, respuesta)
 
                     else -> {
                         Log.e(TAG, "Operación ${operacion.outboxId} falló: ${respuesta.code()}")
@@ -149,7 +150,7 @@ class SyncWorker @AssistedInject constructor(
         Log.d(TAG, "Operación ${operacion.outboxId} sincronizada")
     }
 
-    private suspend fun resolverConflicto(operacion: OutboxEntity) {
+    private suspend fun resolverConflicto(operacion: OutboxEntity, respuesta: Response<*>) {
         if (operacion.operacion == "CREATE") {
             // 409 en un alta significa documento ya registrado. Reintentar da
             // siempre el mismo resultado, así que se marca y se saca de la cola.
@@ -159,7 +160,28 @@ class SyncWorker @AssistedInject constructor(
             outboxDao.eliminar(operacion.outboxId)
             return
         }
+
+        // Una edición puede recibir 409 por dos motivos opuestos. El conflicto
+        // de versión se arregla reintentando con la versión del servidor; el
+        // documento repetido no se arregla nunca, y mandarlo al resolver lo
+        // dejaría reintentando para siempre.
+        if (esDocumentoDuplicado(respuesta)) {
+            Log.e(TAG, "El documento de ${operacion.personaId} ya pertenece a otro participante")
+            personaDao.actualizarSyncStatus(operacion.personaId, "CONFLICT")
+            outboxDao.eliminar(operacion.outboxId)
+            return
+        }
+
         conflictResolver.resolver(operacion)
+    }
+
+    private fun esDocumentoDuplicado(respuesta: Response<*>): Boolean {
+        // errorBody() se consume al leerlo, así que se lee una sola vez.
+        val cuerpo = respuesta.errorBody()?.string() ?: return false
+
+        return runCatching {
+            gson.fromJson(cuerpo, ErrorApiDto::class.java)?.codigo == CODIGO_DOCUMENTO_DUPLICADO
+        }.getOrDefault(false)
     }
 
     private suspend fun registrarIntentoFallido(operacion: OutboxEntity) {
@@ -206,6 +228,7 @@ class SyncWorker @AssistedInject constructor(
         const val TAG = "SYNC_DEBUG"
         const val MAX_INTENTOS = 4
         const val INICIO_DE_LOS_TIEMPOS = "1970-01-01T00:00:00.000Z"
+        const val CODIGO_DOCUMENTO_DUPLICADO = "DOCUMENTO_DUPLICADO"
         val JSON = "application/json".toMediaType()
     }
 }

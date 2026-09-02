@@ -6,6 +6,7 @@ import com.tuapp.bancopersonas.domain.model.Persona
 import com.tuapp.bancopersonas.domain.model.SyncStatus
 import com.tuapp.bancopersonas.domain.usecase.CrearPersonaUseCase
 import com.tuapp.bancopersonas.domain.usecase.EditarPersonaUseCase
+import com.tuapp.bancopersonas.domain.usecase.ResultadoGuardado
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -77,12 +78,22 @@ class PersonaFormViewModel @Inject constructor(
                 syncStatus = SyncStatus.PENDING
             )
 
-            if (estado.esEdicion) {
+            val resultado = if (estado.esEdicion) {
                 editarPersonaUseCase(persona)
             } else {
                 crearPersonaUseCase(persona, estado.password)
             }
-            onExito()
+
+            when (resultado) {
+                ResultadoGuardado.Exito -> onExito()
+
+                // Antes esto no existía: el formulario cerraba como si todo
+                // hubiera salido bien y el rechazo aparecía —o no aparecía—
+                // mucho después, en la sincronización.
+                ResultadoGuardado.DocumentoDuplicado -> _uiState.update {
+                    it.copy(error = "Ese documento ya pertenece a otro participante")
+                }
+            }
         }
     }
 

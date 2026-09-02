@@ -40,8 +40,13 @@ const editarPersona = async (req, res) => {
             [nombre, documento, telefono, id, version]
         );
         if (resultado.rows.length === 0) {
-            // No actualizó ninguna fila: la versión no coincide = conflicto
-            return res.status(409).json({ error: 'Conflicto de versión' });
+            // No actualizó ninguna fila: la versión no coincide = conflicto.
+            // El código lo distingue del otro 409 de este endpoint: este se
+            // resuelve solo reintentando con la versión del servidor, el del
+            // documento repetido no se resuelve nunca por más que se insista.
+            return res
+                .status(409)
+                .json({ error: 'Conflicto de versión', codigo: 'CONFLICTO_VERSION' });
         }
 
         // Si los datos realmente cambiaron, guardar en historial
@@ -68,6 +73,18 @@ const editarPersona = async (req, res) => {
 
         res.json(resultado.rows[0]);
     } catch (error) {
+        // 23505: violación del índice único de documento.
+        //
+        // El alta ya contemplaba este caso; la edición no, y salía como 500.
+        // Para el cliente un 500 es una falla transitoria: reintentaba cuatro
+        // veces contra un error que nunca iba a resolverse y terminaba
+        // descartando el cambio en silencio.
+        if (error.code === '23505') {
+            return res.status(409).json({
+                error: 'Ese documento ya pertenece a otro participante',
+                codigo: 'DOCUMENTO_DUPLICADO',
+            });
+        }
         console.error(error);
         res.status(500).json({ error: 'Error al editar persona' });
     }
