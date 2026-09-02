@@ -1,44 +1,62 @@
 package com.tuapp.bancopersonas.ui.theme
 
-import android.app.Activity
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 
-private val DarkColorScheme = darkColorScheme(
+private val EsquemaOscuro = darkColorScheme(
     primary = WinPlayPink,
-    secondary = WinPlayPurple,
-    tertiary = WinPlayPurple,
-    background = WinPlayDarkBg,
-    surface = WinPlaySurface,
     onPrimary = Color.White,
+    secondary = WinPlayPurple,
     onSecondary = Color.White,
+    tertiary = WinPlayPurple,
+
+    background = WinPlayDarkBg,
     onBackground = WinPlayText,
+
+    surface = WinPlaySurface,
     onSurface = WinPlayText,
-    surfaceVariant = WinPlaySurface,
-    onSurfaceVariant = WinPlayTextMuted
+    surfaceVariant = WinPlaySurfaceAlt,
+    onSurfaceVariant = WinPlayTextMuted,
+
+    outline = WinPlayOutline,
+    outlineVariant = WinPlayOutline,
+
+    // Antes el error caía en el rojo por defecto de Material. Con estos dos
+    // el mensaje se muestra como un bloque tenue y legible en lugar de un
+    // renglón rojo suelto.
+    error = WinPlayError,
+    onError = Color(0xFF3A0A14),
+    errorContainer = WinPlayErrorContainer,
+    onErrorContainer = WinPlayError
 )
 
-private val LightColorScheme = DarkColorScheme // Force dark mode for gaming theme
+// Esquinas generosas y parejas. Las formas hacen más por la sensación de
+// suavidad que cualquier sombra, y no cuestan nada de rendimiento.
+private val Formas = Shapes(
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(16.dp),
+    large = RoundedCornerShape(24.dp),
+    extraLarge = RoundedCornerShape(28.dp)
+)
 
 @Composable
 fun RegistroccTheme(
-    darkTheme: Boolean = true, // Force dark theme
-    dynamicColor: Boolean = false, // Disable dynamic colors to keep brand identity
+    darkTheme: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = DarkColorScheme
-
+    // La aplicación es siempre oscura a propósito: es su identidad, y el color
+    // dinámico del sistema la volvería otra cosa en cada teléfono.
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = EsquemaOscuro,
         typography = Typography,
+        shapes = Formas,
         content = content
     )
 }
