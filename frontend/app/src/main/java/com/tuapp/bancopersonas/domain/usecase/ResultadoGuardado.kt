@@ -3,17 +3,20 @@ package com.tuapp.bancopersonas.domain.usecase
 /**
  * Desenlace de un alta o una edición.
  *
- * Existe para que el rechazo por documento repetido llegue a la pantalla como
- * un mensaje y no como silencio. Antes, ese choque se descubría recién en la
- * sincronización, en segundo plano: el servidor lo rechazaba, la cola lo
- * reintentaba en vano y terminaba descartando el cambio sin que nadie se
- * enterara. Desde la aplicación se veía como un dato que simplemente no se
- * actualizaba.
+ * Existe para que un rechazo llegue a la pantalla como un mensaje y no como
+ * silencio. En el sistema anterior el choque por documento repetido se
+ * descubría recién en la sincronización, en segundo plano: el servidor lo
+ * rechazaba, la cola lo reintentaba en vano y terminaba descartando el cambio
+ * sin que nadie se enterara. Desde la aplicación se veía como un dato que
+ * simplemente no se guardaba.
  */
 sealed interface ResultadoGuardado {
 
     data object Exito : ResultadoGuardado
 
-    /** Otro participante activo ya tiene ese documento. */
-    data object DocumentoDuplicado : ResultadoGuardado
+    /** Ya hay una persona activa con ese tipo y número de documento. */
+    data class DocumentoDuplicado(val nombreExistente: String) : ResultadoGuardado
+
+    /** Falta algún campo obligatorio. */
+    data class Incompleto(val campos: List<String>) : ResultadoGuardado
 }

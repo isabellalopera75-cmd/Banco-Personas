@@ -7,15 +7,15 @@ import javax.inject.Inject
 
 class EditarPersonaUseCase @Inject constructor(
     private val repository: PersonaRepository,
-    private val syncScheduler: SyncScheduler
+    private val syncScheduler: SyncScheduler,
 ) {
     suspend operator fun invoke(persona: Persona): ResultadoGuardado {
-        val dueño = repository.buscarPorDocumento(persona.documento)
+        val duenio = repository.buscarPorDocumento(persona.tipoDocumento, persona.numeroDocumento)
 
         // Se compara por id y no por existencia: al cambiar solo el teléfono,
         // la búsqueda se encuentra a sí misma, y eso no es un conflicto.
-        if (dueño != null && dueño.id != persona.id) {
-            return ResultadoGuardado.DocumentoDuplicado
+        if (duenio != null && duenio.id != persona.id) {
+            return ResultadoGuardado.DocumentoDuplicado(duenio.nombreCompleto)
         }
 
         repository.editarPersona(persona)

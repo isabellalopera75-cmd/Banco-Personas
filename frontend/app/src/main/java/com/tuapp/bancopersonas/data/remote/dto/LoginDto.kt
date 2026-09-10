@@ -1,38 +1,49 @@
 package com.tuapp.bancopersonas.data.remote.dto
 
-data class LoginRequest(
-    val rol: String,
-    val nombre: String? = null,
-    val documento: String? = null,
-    val password: String
-)
+import com.google.gson.annotations.SerializedName
 
-data class RegisterRequest(
-    val id: String,
-    val nombre: String,
-    val documento: String,
-    val telefono: String? = null,
-    val password: String
+/** POST /api/auth/login-operador — admin y registrador. */
+data class LoginOperadorRequest(
+    val usuario: String,
+    val password: String,
 )
 
 /**
- * Lo que la outbox guarda para un alta pendiente.
+ * POST /api/auth/login-persona — el rol usuario.
  *
- * La contraseña NO viaja acá a propósito: la tabla de Room no está cifrada.
- * Vive en SessionManager, cifrada, hasta el momento de enviarla.
+ * No lleva contraseña: la credencial es el propio documento. Es una decisión
+ * de negocio tomada con el riesgo advertido, documentada en
+ * docs/diseno-tres-roles.md.
  */
-data class RegistroPendiente(
-    val id: String,
-    val nombre: String,
-    val documento: String,
-    val telefono: String? = null
+data class LoginPersonaRequest(
+    @SerializedName("tipo_documento") val tipoDocumento: String,
+    @SerializedName("numero_documento") val numeroDocumento: String,
 )
 
-/** Respuesta común de /api/auth/login y /api/auth/register. */
-data class AuthResponse(
-    val success: Boolean,
+data class UsuarioDto(
+    val id: String,
+    val usuario: String,
+    val rol: String,
+    val activo: Boolean = true,
+    @SerializedName("creado_por") val creadoPor: String? = null,
+    @SerializedName("creado_en") val creadoEn: String? = null,
+)
+
+data class AuthRespuestaDto(
     val rol: String? = null,
-    val persona: PersonaDto? = null,
     val token: String? = null,
-    val error: String? = null
+    val usuario: UsuarioDto? = null,
+    val persona: PersonaDto? = null,
+    val error: String? = null,
+)
+
+/** POST /api/usuarios — el admin crea un registrador. */
+data class CrearUsuarioRequest(
+    val usuario: String,
+    val password: String,
+)
+
+data class ActualizarUsuarioRequest(
+    val activo: Boolean? = null,
+    val password: String? = null,
 )

@@ -1,5 +1,6 @@
 package com.tuapp.bancopersonas.data.remote
 
+import com.tuapp.bancopersonas.BuildConfig
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -13,8 +14,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
-
-    private const val BASE_URL = "https://api.isita.online/"
 
     @Provides
     @Singleton
@@ -33,7 +32,14 @@ object NetworkModule {
     @Singleton
     fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
         return Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            // Sale de BuildConfig: la compilación de depuración apunta al
+            // servidor local y la de publicación al de producción.
+            // Ver app/build.gradle.kts.
+            //
+            // Se lee acá dentro y no en una propiedad del módulo porque el
+            // procesador de Hilt corre antes de que BuildConfig exista, y una
+            // constante a nivel de objeto no le resuelve.
+            .baseUrl(BuildConfig.BASE_URL)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
@@ -49,5 +55,17 @@ object NetworkModule {
     @Singleton
     fun provideAuthApi(retrofit: Retrofit): AuthApi {
         return retrofit.create(AuthApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideUsuarioApi(retrofit: Retrofit): UsuarioApi {
+        return retrofit.create(UsuarioApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideConflictoApi(retrofit: Retrofit): ConflictoApi {
+        return retrofit.create(ConflictoApi::class.java)
     }
 }

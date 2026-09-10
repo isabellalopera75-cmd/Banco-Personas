@@ -9,15 +9,19 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface HistorialDao {
-    @Query("SELECT * FROM historial_cambios WHERE personaId = :personaId ORDER BY creadoEn DESC")
-    fun observarHistorial(personaId: String): Flow<List<HistorialEntity>>
 
-    @Query("SELECT * FROM historial_cambios WHERE personaId = :personaId ORDER BY creadoEn DESC")
-    suspend fun obtenerHistorial(personaId: String): List<HistorialEntity>
+    @Query(
+        """SELECT * FROM historial_cambios WHERE personaId = :personaId
+           ORDER BY version DESC, id DESC"""
+    )
+    fun observarHistorial(personaId: String): Flow<List<HistorialEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun guardarVarios(historiales: List<HistorialEntity>)
 
     @Query("DELETE FROM historial_cambios WHERE personaId = :personaId")
     suspend fun limpiarHistorial(personaId: String)
+
+    @Query("DELETE FROM historial_cambios")
+    suspend fun limpiarTodo()
 }

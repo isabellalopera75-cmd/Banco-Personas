@@ -20,7 +20,20 @@ android {
     }
 
     buildTypes {
+        // La URL del servidor deja de estar clavada en el código.
+        //
+        // Con una sola constante era imposible probar contra un backend local:
+        // había que editar NetworkModule.kt, compilar, y acordarse de
+        // revertirlo antes de publicar. Ese "acordarse" es exactamente lo que
+        // termina mandando una versión de prueba a producción.
+        //
+        // 10.0.2.2 es la dirección con la que el emulador de Android alcanza
+        // a la máquina que lo hospeda; en un teléfono real no significa nada.
+        debug {
+            buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:3000/\"")
+        }
         release {
+            buildConfigField("String", "BASE_URL", "\"https://api.isita.online/\"")
             optimization {
                 enable = false
             }
@@ -32,6 +45,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
