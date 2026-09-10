@@ -56,10 +56,11 @@ import com.tuapp.bancopersonas.domain.model.Persona
 import com.tuapp.bancopersonas.domain.model.SyncStatus
 import com.tuapp.bancopersonas.ui.components.CampoTexto
 import com.tuapp.bancopersonas.ui.components.Etiqueta
-import com.tuapp.bancopersonas.ui.theme.WinPlayDarkBg
-import com.tuapp.bancopersonas.ui.theme.WinPlayDarkBgTop
-import com.tuapp.bancopersonas.ui.theme.WinPlayError
-import com.tuapp.bancopersonas.ui.theme.WinPlayPinkSoft
+import com.tuapp.bancopersonas.ui.theme.PadronFondo
+import com.tuapp.bancopersonas.ui.theme.PadronFondoAlto
+import com.tuapp.bancopersonas.ui.theme.PadronError
+import com.tuapp.bancopersonas.ui.theme.PadronExito
+import com.tuapp.bancopersonas.ui.theme.PadronAdvertencia
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -154,7 +155,7 @@ fun PersonaListScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(WinPlayDarkBgTop, WinPlayDarkBg)))
+                .background(Brush.verticalGradient(listOf(PadronFondoAlto, PadronFondo)))
                 .padding(relleno)
                 .padding(horizontal = 16.dp),
         ) {
@@ -223,7 +224,7 @@ private fun BarraEstado(pendientes: Int, sinConexion: Boolean, enRevision: Int) 
                 LineaEstado(
                     Icons.Default.CloudUpload,
                     "$pendientes cambio(s) esperando para enviarse.",
-                    WinPlayPinkSoft,
+                    PadronAdvertencia,
                 )
             }
             if (enRevision > 0) {
@@ -231,7 +232,7 @@ private fun BarraEstado(pendientes: Int, sinConexion: Boolean, enRevision: Int) 
                     Icons.Default.ReportProblem,
                     "$enRevision registro(s) en revisión del administrador. " +
                         "Los datos están guardados en el servidor.",
-                    WinPlayError,
+                    PadronError,
                 )
             }
         }
@@ -283,7 +284,7 @@ private fun TarjetaPersona(persona: Persona, onEditar: () -> Unit, onEliminar: (
                 Icon(
                     Icons.Default.Delete,
                     contentDescription = "Dar de baja",
-                    tint = WinPlayError,
+                    tint = PadronError,
                     modifier = Modifier.size(20.dp),
                 )
             }
@@ -300,8 +301,8 @@ private fun TarjetaPersona(persona: Persona, onEditar: () -> Unit, onEliminar: (
  */
 @Composable
 private fun EtiquetaSync(estado: SyncStatus) = when (estado) {
-    SyncStatus.SYNCED -> Etiqueta("Guardado", Color(0xFF6FCF97), Icons.Default.CheckCircle)
-    SyncStatus.PENDING -> Etiqueta("Sin enviar", WinPlayPinkSoft, Icons.Default.HourglassEmpty)
+    SyncStatus.SYNCED -> Etiqueta("Guardado", PadronExito, Icons.Default.CheckCircle)
+    SyncStatus.PENDING -> Etiqueta("Sin enviar", PadronAdvertencia, Icons.Default.HourglassEmpty)
     SyncStatus.EN_REVISION ->
-        Etiqueta("En revisión del administrador", WinPlayError, Icons.Default.ReportProblem)
+        Etiqueta("En revisión del administrador", PadronError, Icons.Default.ReportProblem)
 }

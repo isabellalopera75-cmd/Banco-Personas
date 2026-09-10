@@ -40,8 +40,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tuapp.bancopersonas.domain.model.Persona
-import com.tuapp.bancopersonas.ui.theme.WinPlayDarkBg
-import com.tuapp.bancopersonas.ui.theme.WinPlayDarkBgTop
+import com.tuapp.bancopersonas.ui.theme.PadronFondo
+import com.tuapp.bancopersonas.ui.theme.PadronFondoAlto
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,7 +72,7 @@ fun UsuarioScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(WinPlayDarkBgTop, WinPlayDarkBg)))
+                .background(Brush.verticalGradient(listOf(PadronFondoAlto, PadronFondo)))
                 .padding(relleno)
                 .padding(horizontal = 20.dp)
                 .verticalScroll(rememberScrollState()),

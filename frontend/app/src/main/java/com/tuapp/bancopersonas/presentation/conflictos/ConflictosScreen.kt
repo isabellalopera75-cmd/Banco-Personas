@@ -54,10 +54,10 @@ import com.tuapp.bancopersonas.data.remote.dto.ConflictoAdminDto
 import com.tuapp.bancopersonas.ui.components.CampoTexto
 import com.tuapp.bancopersonas.ui.components.Etiqueta
 import com.tuapp.bancopersonas.ui.components.MensajeError
-import com.tuapp.bancopersonas.ui.theme.WinPlayDarkBg
-import com.tuapp.bancopersonas.ui.theme.WinPlayDarkBgTop
-import com.tuapp.bancopersonas.ui.theme.WinPlayError
-import com.tuapp.bancopersonas.ui.theme.WinPlayPinkSoft
+import com.tuapp.bancopersonas.ui.theme.PadronFondo
+import com.tuapp.bancopersonas.ui.theme.PadronFondoAlto
+import com.tuapp.bancopersonas.ui.theme.PadronError
+import com.tuapp.bancopersonas.ui.theme.PadronAdvertencia
 
 /**
  * La cola de conflictos del administrador.
@@ -105,7 +105,7 @@ fun ConflictosScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(WinPlayDarkBgTop, WinPlayDarkBg)))
+                .background(Brush.verticalGradient(listOf(PadronFondoAlto, PadronFondo)))
                 .padding(relleno)
                 .padding(horizontal = 16.dp),
         ) {
@@ -154,7 +154,7 @@ private fun TarjetaConflicto(conflicto: ConflictoAdminDto, onClick: () -> Unit) 
                 Etiqueta(
                     texto = if (conflicto.tipo == "ALTA_DUPLICADA") "Alta duplicada"
                     else "Edición simultánea",
-                    color = if (conflicto.tipo == "ALTA_DUPLICADA") WinPlayError else WinPlayPinkSoft,
+                    color = if (conflicto.tipo == "ALTA_DUPLICADA") PadronError else PadronAdvertencia,
                 )
                 Spacer(Modifier.weight(1f))
                 Text(
@@ -239,7 +239,7 @@ private fun DetalleConflicto(
                             Text(
                                 "Llegó: ${campo.valorEnviado ?: "—"}",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = WinPlayPinkSoft,
+                                color = PadronAdvertencia,
                             )
                         }
                     }
@@ -325,7 +325,7 @@ private fun DetalleConflicto(
                 TextButton(
                     onClick = { onDescartar(nota) },
                     enabled = !resolviendo && !separando,
-                ) { Text("Descartar", color = WinPlayError) }
+                ) { Text("Descartar", color = PadronError) }
             }
         },
     )
