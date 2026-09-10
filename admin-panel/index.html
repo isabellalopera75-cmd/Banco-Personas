@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Padrón EPS — Administración</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- ====================================================== Inicio de sesión -->
+<section id="vista-login" class="login-wrap">
+    <form class="login-card" id="form-login">
+        <h1>Padrón EPS</h1>
+        <p class="sub">Panel de administración</p>
+
+        <label for="usuario">Usuario</label>
+        <input id="usuario" type="text" autocomplete="username" required>
+
+        <label for="password">Contraseña</label>
+        <input id="password" type="password" autocomplete="current-password" required>
+
+        <button type="submit" class="btn btn-primary" id="btn-entrar">Entrar</button>
+
+        <p class="aviso" id="login-error" hidden></p>
+
+        <p class="nota">
+            Solo para administradores. Los registradores trabajan desde la aplicación
+            del teléfono.
+        </p>
+    </form>
+</section>
+
+<!-- ============================================================= Panel -->
+<div id="vista-panel" hidden>
+
+    <header class="barra">
+        <div class="marca">Padrón EPS <span>· Administración</span></div>
+        <nav class="tabs" id="tabs">
+            <button class="tab activa" data-vista="conflictos">
+                Conflictos <span class="contador" id="contador-conflictos" hidden>0</span>
+            </button>
+            <button class="tab" data-vista="padron">Padrón</button>
+            <button class="tab" data-vista="registradores">Registradores</button>
+        </nav>
+        <div class="sesion">
+            <span id="sesion-usuario"></span>
+            <button class="btn btn-plano" id="btn-salir">Salir</button>
+        </div>
+    </header>
+
+    <main class="contenido">
+
+        <!-- --------------------------------------------------- Conflictos -->
+        <section id="panel-conflictos">
+            <div class="encabezado">
+                <div>
+                    <h2>Conflictos</h2>
+                    <p class="sub">
+                        Cada fila es trabajo de campo que el servidor no pudo aplicar solo.
+                        Nada se descarta hasta que vos lo decidas.
+                    </p>
+                </div>
+                <select id="filtro-estado" class="select">
+                    <option value="PENDIENTE">Pendientes</option>
+                    <option value="RESUELTO">Resueltos</option>
+                    <option value="DESCARTADO">Descartados</option>
+                    <option value="TODOS">Todos</option>
+                </select>
+            </div>
+            <div id="lista-conflictos"></div>
+        </section>
+
+        <!-- ------------------------------------------------------- Padrón -->
+        <section id="panel-padron" hidden>
+            <div class="encabezado">
+                <div>
+                    <h2>Padrón</h2>
+                    <p class="sub" id="total-personas"></p>
+                </div>
+                <input id="buscar-persona" class="select" type="search"
+                       placeholder="Buscar por nombre o documento">
+            </div>
+            <div id="tabla-padron"></div>
+        </section>
+
+        <!-- ------------------------------------------------ Registradores -->
+        <section id="panel-registradores" hidden>
+            <div class="encabezado">
+                <div>
+                    <h2>Registradores</h2>
+                    <p class="sub">
+                        Las cuentas se crean acá. Un registrador desactivado deja de entrar,
+                        pero sus registros y su rastro en el historial se conservan.
+                    </p>
+                </div>
+                <button class="btn btn-primary" id="btn-nuevo-registrador">Nuevo registrador</button>
+            </div>
+            <div id="tabla-registradores"></div>
+        </section>
+
+    </main>
+</div>
+
+<!-- ============================================================ Diálogos -->
+<dialog id="dialogo" class="dialogo">
+    <div id="dialogo-cuerpo"></div>
+</dialog>
+
+<div id="aviso-flotante" class="aviso-flotante" hidden></div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

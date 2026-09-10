@@ -6,6 +6,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "4173", "--directory", "landing-page"],
       "port": 4173
+    },
+    {
+      "name": "admin",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "4174", "--directory", "admin-panel"],
+      "port": 4174
     }
   ]
 }
