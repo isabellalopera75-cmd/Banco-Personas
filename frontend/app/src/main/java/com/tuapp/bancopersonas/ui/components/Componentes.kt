@@ -35,8 +35,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
-import com.tuapp.bancopersonas.ui.theme.WinPlayDarkBg
-import com.tuapp.bancopersonas.ui.theme.WinPlayDarkBgTop
+import com.tuapp.bancopersonas.ui.theme.PadronFondo
+import com.tuapp.bancopersonas.ui.theme.PadronFondoAlto
 
 /**
  * Contenedor de pantalla para formularios.
@@ -57,7 +57,7 @@ fun PantallaConTeclado(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(WinPlayDarkBgTop, WinPlayDarkBg)))
+            .background(Brush.verticalGradient(listOf(PadronFondoAlto, PadronFondo)))
             .verticalScroll(rememberScrollState())
             .imePadding()
             .padding(horizontal = 20.dp, vertical = 24.dp),

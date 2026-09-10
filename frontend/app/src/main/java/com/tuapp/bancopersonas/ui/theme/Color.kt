@@ -2,31 +2,55 @@ package com.tuapp.bancopersonas.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Identidad de marca. El rosa saturado se conserva, pero pasa a usarse solo
-// como acento —un borde, un icono activo, el botón principal— y no como
-// relleno de superficies grandes ni como halo de sombra: a 16dp de glow
-// alrededor de cada tarjeta, ese rosa era lo primero que veía el ojo.
-val WinPlayPink = Color(0xFFFF4B72)
-val WinPlayPurple = Color(0xFF6B48FF)
+/*
+ * Paleta del padrón.
+ *
+ * Reemplaza a la anterior, heredada de la aplicación de sorteos: rosa neón y
+ * púrpura sobre negro. Esa combinación decía "casino", y esto es un registro
+ * de salud.
+ *
+ * El cambio de fondo oscuro a claro no es solo estético. Quien usa esta
+ * aplicación trabaja al aire libre: un registrador anotando personas en una
+ * vereda, con el teléfono al sol. Texto gris apagado sobre negro es casi
+ * ilegible en esa condición, y esa condición es la normal acá, no la
+ * excepción.
+ *
+ * Los contrastes cumplen WCAG AA sobre el fondo claro:
+ * Tinta 15.8:1, TintaSuave 5.4:1, Primario 5.6:1.
+ */
 
-/** Rosa apagado para texto y bordes: mismo tono, sin gritar. */
-val WinPlayPinkSoft = Color(0xFFFF93A8)
+/** Verde azulado. Lee cuidado y salud sin caer en el azul corporativo. */
+val PadronPrimario = Color(0xFF0F766E)
+val PadronPrimarioOscuro = Color(0xFF115E59)
 
-// Fondos. Tres niveles en vez de negro plano: el degradado da profundidad
-// sin necesidad de sombras marcadas.
-val WinPlayDarkBg = Color(0xFF0F0F13)
-val WinPlayDarkBgTop = Color(0xFF191423)
-val WinPlaySurface = Color(0xFF1B1B22)
-val WinPlaySurfaceAlt = Color(0xFF23232C)
+/** Fondo teñido para chips y bloques de acento. */
+val PadronPrimarioSuave = Color(0xFFE6F4F1)
+val PadronPrimarioLinea = Color(0xFF99D6CD)
 
-val WinPlayText = Color(0xFFF5F5F7)
-val WinPlayTextMuted = Color(0xFF9A9AAB)
+val PadronTinta = Color(0xFF0F1E23)
+val PadronTintaSuave = Color(0xFF52646B)
 
-/** Borde apenas visible. Reemplaza a las sombras para separar planos. */
-val WinPlayOutline = Color(0xFF2E2E3A)
+val PadronFondo = Color(0xFFF5F8F8)
 
-// El error tiene que leerse como una advertencia, no como una alarma: un rojo
-// difuminado sobre un fondo tenue del mismo tono, en vez de texto rojo puro
-// suelto sobre negro.
-val WinPlayError = Color(0xFFFF9DAC)
-val WinPlayErrorContainer = Color(0xFF2A1620)
+/** Extremo superior del degradado de pantalla. Apenas se despega del fondo. */
+val PadronFondoAlto = Color(0xFFFFFFFF)
+
+val PadronSuperficie = Color(0xFFFFFFFF)
+val PadronSuperficieAlt = Color(0xFFEEF3F3)
+
+/** Borde apenas visible. Separa planos sin recurrir a sombras. */
+val PadronBorde = Color(0xFFDDE6E7)
+
+/*
+ * Los tres estados de sincronización tienen colores distintos y deliberados.
+ *
+ * EN_REVISION usa el tono de error, pero eso no significa que algo salió mal:
+ * significa que hace falta una decisión humana. El texto que lo acompaña lo
+ * aclara — la etiqueta dice "En revisión del administrador", nunca "error".
+ */
+val PadronExito = Color(0xFF15803D)
+val PadronAdvertencia = Color(0xFFB45309)
+val PadronError = Color(0xFFB3261E)
+
+val PadronErrorContenedor = Color(0xFFFCEDEC)
+val PadronSobreErrorContenedor = Color(0xFF7F1D1B)

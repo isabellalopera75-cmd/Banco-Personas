@@ -3,36 +3,38 @@ package com.tuapp.bancopersonas.ui.theme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-private val EsquemaOscuro = darkColorScheme(
-    primary = WinPlayPink,
+private val EsquemaClaro = lightColorScheme(
+    primary = PadronPrimario,
     onPrimary = Color.White,
-    secondary = WinPlayPurple,
+    primaryContainer = PadronPrimarioSuave,
+    onPrimaryContainer = PadronPrimarioOscuro,
+
+    secondary = PadronPrimarioOscuro,
     onSecondary = Color.White,
-    tertiary = WinPlayPurple,
+    tertiary = PadronPrimario,
 
-    background = WinPlayDarkBg,
-    onBackground = WinPlayText,
+    background = PadronFondo,
+    onBackground = PadronTinta,
 
-    surface = WinPlaySurface,
-    onSurface = WinPlayText,
-    surfaceVariant = WinPlaySurfaceAlt,
-    onSurfaceVariant = WinPlayTextMuted,
+    surface = PadronSuperficie,
+    onSurface = PadronTinta,
+    surfaceVariant = PadronSuperficieAlt,
+    onSurfaceVariant = PadronTintaSuave,
 
-    outline = WinPlayOutline,
-    outlineVariant = WinPlayOutline,
+    outline = PadronBorde,
+    outlineVariant = PadronBorde,
 
-    // Antes el error caía en el rojo por defecto de Material. Con estos dos
-    // el mensaje se muestra como un bloque tenue y legible en lugar de un
-    // renglón rojo suelto.
-    error = WinPlayError,
-    onError = Color(0xFF3A0A14),
-    errorContainer = WinPlayErrorContainer,
-    onErrorContainer = WinPlayError
+    // El error se muestra como un bloque tenue y legible, no como un renglón
+    // rojo suelto. Un aviso que grita se ignora igual que uno que no se ve.
+    error = PadronError,
+    onError = Color.White,
+    errorContainer = PadronErrorContenedor,
+    onErrorContainer = PadronSobreErrorContenedor
 )
 
 // Esquinas generosas y parejas. Las formas hacen más por la sensación de
@@ -47,14 +49,17 @@ private val Formas = Shapes(
 
 @Composable
 fun RegistroccTheme(
-    darkTheme: Boolean = true,
+    darkTheme: Boolean = false,
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    // La aplicación es siempre oscura a propósito: es su identidad, y el color
-    // dinámico del sistema la volvería otra cosa en cada teléfono.
+    // Siempre claro, y no por gusto: esta aplicación se usa al sol. Un tema
+    // oscuro es más difícil de leer al aire libre, y seguir el tema del
+    // sistema dejaría esa decisión librada a cómo cada quien configuró su
+    // teléfono. El color dinámico está apagado por lo mismo: volvería la
+    // aplicación otra en cada dispositivo.
     MaterialTheme(
-        colorScheme = EsquemaOscuro,
+        colorScheme = EsquemaClaro,
         typography = Typography,
         shapes = Formas,
         content = content
