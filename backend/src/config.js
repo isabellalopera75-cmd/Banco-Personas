@@ -7,6 +7,13 @@
 
 require('dotenv').config();
 
+// ADMIN_USER y ADMIN_PASSWORD_HASH ya no figuran acá, y no es un olvido: el
+// administrador dejó de vivir en el entorno y pasó a ser una fila de
+// `usuarios`, igual que cualquier registrador. El servidor ya no necesita
+// saber nada de él para arrancar.
+//
+// Quien sí las necesita es scripts/crear-admin.js, que las lee por su cuenta
+// y usa ADMIN_PASSWORD en claro (hashea él mismo) en lugar de un hash ya hecho.
 const VARIABLES_REQUERIDAS = [
     'DB_USER',
     'DB_PASSWORD',
@@ -14,8 +21,6 @@ const VARIABLES_REQUERIDAS = [
     'DB_PORT',
     'DB_NAME',
     'JWT_SECRET',
-    'ADMIN_USER',
-    'ADMIN_PASSWORD_HASH',
 ];
 
 const faltantes = VARIABLES_REQUERIDAS.filter((clave) => !process.env[clave]);
@@ -41,10 +46,5 @@ module.exports = {
     jwt: {
         secret: process.env.JWT_SECRET,
         expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-    },
-
-    admin: {
-        usuario: process.env.ADMIN_USER,
-        passwordHash: process.env.ADMIN_PASSWORD_HASH,
     },
 };
