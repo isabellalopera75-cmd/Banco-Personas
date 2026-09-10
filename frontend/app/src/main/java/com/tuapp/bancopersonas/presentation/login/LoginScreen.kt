@@ -70,7 +70,7 @@ fun LoginScreen(
 
     PantallaConTeclado { anchoCompleto ->
         Text(
-            text = "Padrón EPS",
+            text = "SANITS",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,
