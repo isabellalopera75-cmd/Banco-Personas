@@ -13,8 +13,10 @@ android {
         applicationId = "com.tuapp.bancopersonas"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        // 2.0: el esquema cambió por completo. La base local se recrea sola
+        // (migración destructiva de Room), pero conviene que la versión lo diga.
+        versionCode = 2
+        versionName = "2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -34,6 +36,19 @@ android {
         }
         release {
             buildConfigField("String", "BASE_URL", "\"https://api.isita.online/\"")
+
+            // Se firma con la clave de depuración a propósito.
+            //
+            // Android no instala un APK sin firmar, y esta aplicación se
+            // distribuye descargándola desde la landing, no por Play Store.
+            // Con esto el APK de publicación se instala igual que hasta ahora,
+            // sin agregar una clave nueva que haya que custodiar y que, si se
+            // pierde, impide volver a actualizar la aplicación jamás.
+            //
+            // Si algún día se publica en Play Store hay que generar una clave
+            // propia. Conviene hacerlo ANTES de tener usuarios: cambiar la
+            // firma obliga a desinstalar y reinstalar a todo el mundo.
+            signingConfig = signingConfigs.getByName("debug")
             optimization {
                 enable = false
             }

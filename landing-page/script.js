@@ -30,9 +30,9 @@ document.addEventListener('DOMContentLoaded', () => {
             downloadBtn.style.opacity = '0.8';
             
             setTimeout(() => {
-                alert("La descarga del APK de WinPlay ha comenzado.");
+                alert("La descarga de la aplicación ha comenzado.");
                 // Redirige al APK generado para iniciar la descarga
-                window.location.href = './app-debug.apk';
+                window.location.href = './app-release.apk';
                 
                 downloadBtn.innerHTML = originalText;
                 downloadBtn.style.opacity = '1';

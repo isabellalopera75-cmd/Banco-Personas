@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WinPlay - App de Sorteos Exclusivos</title>
+    <title>Padrón EPS — Registro de personas en campo</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
 </head>
@@ -16,25 +16,31 @@
     </div>
 
     <nav class="navbar">
-        <div class="logo">🎉 WinPlay</div>
+        <div class="logo">Padrón EPS</div>
         <div class="nav-links">
-            <a href="#features">Características</a>
+            <a href="#features">Cómo funciona</a>
             <a href="#download" class="nav-btn">Descargar</a>
         </div>
     </nav>
 
     <main class="hero">
         <div class="hero-content">
-            <div class="badge">🔥 La App #1 de Sorteos</div>
-            <h1>Regístrate.<br>Participa.<br><span>Gana.</span></h1>
-            <p>Descubre la nueva forma de participar desde tu celular. Regístrate totalmente gratis, incluso si no tienes conexión a internet.</p>
-            
+            <div class="badge">Aplicación de uso interno</div>
+            <h1>Registrar en campo.<br>Sin señal.<br><span>Sin perder datos.</span></h1>
+            <p>
+                Herramienta para los registradores que levantan el padrón en terreno.
+                Los registros se guardan en el teléfono y se envían solos cuando aparece
+                la conexión.
+            </p>
+
             <div class="cta-container">
                 <button id="download-btn" class="download-btn">
                     <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 5v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2z"></path><path d="M16 11l-4 4-4-4"></path><path d="M12 15V7"></path></svg>
                     Descargar para Android
                 </button>
-                <span class="platform-note">Disponible únicamente para dispositivos móviles.</span>
+                <span class="platform-note">
+                    Las cuentas las crea el administrador. La aplicación no permite registrarse solo.
+                </span>
                 <div id="desktop-warning" class="desktop-warning hidden">
                     ⚠️ Esta aplicación solo puede ser descargada e instalada en un dispositivo Android. ¡Visita esta página desde tu celular!
                 </div>
@@ -45,23 +51,24 @@
             <div class="phone-mockup">
                 <div class="phone-notch"></div>
                 <div class="phone-screen">
-                    <!-- Login UI Mockup -->
                     <div class="app-ui">
                         <div class="app-header">
-                            <h2>¡Bienvenido a WinPlay!</h2>
-                            <p>Inicia sesión para participar</p>
+                            <h2>Padrón EPS</h2>
+                            <p>Registro de personas en campo</p>
                         </div>
                         <form class="app-form">
                             <div class="input-group">
                                 <label>Usuario</label>
-                                <input type="text" placeholder="Ej: MariaGomez" disabled>
+                                <input type="text" placeholder="Ej: campo1" disabled>
                             </div>
                             <div class="input-group">
                                 <label>Contraseña</label>
                                 <input type="password" placeholder="••••••••" disabled>
                             </div>
-                            <button type="button" class="app-btn-primary">Ingresar</button>
-                            <p class="app-register-link">¿No tienes cuenta? <span>Regístrate aquí</span></p>
+                            <button type="button" class="app-btn-primary">Entrar</button>
+                            <p class="app-register-link">
+                                ¿Sos una persona registrada? <span>Consultá tus datos con tu documento</span>
+                            </p>
                         </form>
                     </div>
                 </div>
@@ -71,24 +78,34 @@
 
     <section id="features" class="features-section">
         <div class="section-title">
-            <h2>¿Por qué elegir WinPlay?</h2>
-            <p>Diseñada para darte la mejor experiencia, estés donde estés.</p>
+            <h2>Cómo funciona</h2>
+            <p>Tres roles, y cada uno ve lo que le corresponde.</p>
         </div>
         <div class="features-grid">
             <div class="feature-card">
-                <div class="feature-icon">✨</div>
-                <h3>100% Gratis</h3>
-                <p>Regístrate y comienza a participar sin pagar absolutamente nada. Todo desde tu celular.</p>
-            </div>
-            <div class="feature-card">
                 <div class="feature-icon">📶</div>
-                <h3>Funciona sin Internet</h3>
-                <p>¿Sin datos? No hay problema. Regístrate offline y la app se sincronizará sola apenas consigas conexión.</p>
+                <h3>Funciona sin conexión</h3>
+                <p>
+                    El registrador da de alta, edita y da de baja personas sin señal.
+                    Todo queda en una cola que se envía sola al recuperar internet.
+                </p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon">🚀</div>
-                <h3>Súper Rápida</h3>
-                <p>Una interfaz fluida, oscura e interactiva que responde al instante y no gasta tu batería.</p>
+                <div class="feature-icon">🔀</div>
+                <h3>Nada se pisa</h3>
+                <p>
+                    Si dos personas editan al mismo tiempo campos distintos, los dos
+                    cambios entran. Si chocan en el mismo, el intento queda guardado y
+                    lo resuelve el administrador. Ningún dato se descarta en silencio.
+                </p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📋</div>
+                <h3>Historial completo</h3>
+                <p>
+                    Cada cambio queda registrado campo por campo, con quién lo hizo y
+                    cuándo. El historial no se recorta nunca.
+                </p>
             </div>
         </div>
     </section>
