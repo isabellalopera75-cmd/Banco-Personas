@@ -84,6 +84,8 @@ fun CampoTexto(
     modifier: Modifier = Modifier,
     esPassword: Boolean = false,
     textoAyuda: String? = null,
+    /** Formato en pantalla sin tocar el valor real. Ver [FechaVisualTransformation]. */
+    transformacion: VisualTransformation? = null,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default
 ) {
@@ -106,6 +108,7 @@ fun CampoTexto(
             }
         } else null,
         visualTransformation = when {
+            transformacion != null -> transformacion
             !esPassword || visible -> VisualTransformation.None
             else -> PasswordVisualTransformation()
         },

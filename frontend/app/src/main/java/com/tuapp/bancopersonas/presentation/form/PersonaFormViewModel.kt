@@ -10,6 +10,8 @@ import com.tuapp.bancopersonas.domain.repository.PersonaRepository
 import com.tuapp.bancopersonas.domain.usecase.CrearPersonaUseCase
 import com.tuapp.bancopersonas.domain.usecase.EditarPersonaUseCase
 import com.tuapp.bancopersonas.domain.usecase.ResultadoGuardado
+import com.tuapp.bancopersonas.ui.components.digitosAFechaIso
+import com.tuapp.bancopersonas.ui.components.fechaIsoADigitos
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,6 +29,7 @@ data class FormUiState(
     val segundoNombre: String = "",
     val primerApellido: String = "",
     val segundoApellido: String = "",
+    /** Solo dígitos, en orden DDMMAAAA. Las barras se agregan en pantalla. */
     val fechaNacimiento: String = "",
     val sexo: Sexo = Sexo.F,
     val telefono: String = "",
@@ -69,7 +72,7 @@ class PersonaFormViewModel @Inject constructor(
                 segundoNombre = persona.segundoNombre.orEmpty(),
                 primerApellido = persona.primerApellido,
                 segundoApellido = persona.segundoApellido.orEmpty(),
-                fechaNacimiento = persona.fechaNacimiento,
+                fechaNacimiento = fechaIsoADigitos(persona.fechaNacimiento),
                 sexo = persona.sexo,
                 telefono = persona.telefono.orEmpty(),
                 esEdicion = true,
@@ -86,15 +89,25 @@ class PersonaFormViewModel @Inject constructor(
     fun cambiarSexo(v: Sexo) = _estado.update { it.copy(sexo = v, error = null) }
     fun cambiarTelefono(v: String) = _estado.update { it.copy(telefono = v.filter { c -> c.isDigit() }, error = null) }
 
-    /** Acepta el formato del calendario del sistema: AAAA-MM-DD. */
-    fun cambiarFechaNacimiento(v: String) =
-        _estado.update { it.copy(fechaNacimiento = v.trim(), error = null) }
+    /**
+     * Solo se guardan dígitos, hasta ocho. Filtrar acá y no en la pantalla
+     * significa que da igual si alguien pega "08/07/2008" desde otro lado:
+     * las barras se descartan y queda el mismo valor.
+     */
+    fun cambiarFechaNacimiento(v: String) = _estado.update {
+        it.copy(fechaNacimiento = v.filter { c -> c.isDigit() }.take(8), error = null)
+    }
 
     fun guardar() {
         val e = _estado.value
 
-        if (!FECHA_ISO.matches(e.fechaNacimiento)) {
-            _estado.update { it.copy(error = "La fecha de nacimiento va como AAAA-MM-DD") }
+        // Se valida que la fecha EXISTA, no solo que tenga ocho dígitos. Un
+        // 31 de febrero es un dato malo que después nadie audita.
+        val fechaIso = digitosAFechaIso(e.fechaNacimiento)
+        if (fechaIso == null) {
+            _estado.update {
+                it.copy(error = "Revisá la fecha de nacimiento. Va como día, mes y año: 08072008 es el 8 de julio de 2008.")
+            }
             return
         }
 
@@ -106,7 +119,7 @@ class PersonaFormViewModel @Inject constructor(
             segundoNombre = e.segundoNombre.trim().ifBlank { null },
             primerApellido = e.primerApellido.trim(),
             segundoApellido = e.segundoApellido.trim().ifBlank { null },
-            fechaNacimiento = e.fechaNacimiento,
+            fechaNacimiento = fechaIso,
             sexo = e.sexo,
             telefono = e.telefono.trim().ifBlank { null },
             creadoPor = creadoPor,
@@ -145,9 +158,5 @@ class PersonaFormViewModel @Inject constructor(
                     }
             }
         }
-    }
-
-    private companion object {
-        val FECHA_ISO = Regex("""^\d{4}-\d{2}-\d{2}$""")
     }
 }

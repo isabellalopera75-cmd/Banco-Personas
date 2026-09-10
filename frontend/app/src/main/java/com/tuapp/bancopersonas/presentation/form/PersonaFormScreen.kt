@@ -34,6 +34,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tuapp.bancopersonas.domain.model.Sexo
 import com.tuapp.bancopersonas.domain.model.TipoDocumento
 import com.tuapp.bancopersonas.ui.components.CampoTexto
+import com.tuapp.bancopersonas.ui.components.FechaVisualTransformation
 import com.tuapp.bancopersonas.ui.components.MensajeError
 import com.tuapp.bancopersonas.ui.components.PantallaConTeclado
 import com.tuapp.bancopersonas.ui.components.SelectorDesplegable
@@ -125,7 +126,11 @@ fun PersonaFormScreen(
                 onValorCambia = viewModel::cambiarFechaNacimiento,
                 etiqueta = "Fecha de nacimiento",
                 icono = Icons.Default.Cake,
-                textoAyuda = "AAAA-MM-DD, por ejemplo 1985-03-24",
+                // Se escriben ocho dígitos y las barras aparecen solas. En el
+                // campo se cargan decenas de personas seguidas: tipear los
+                // separadores son ocho pulsaciones extra por cada una.
+                textoAyuda = "DD/MM/AAAA — escribí solo los números: 08072008",
+                transformacion = FechaVisualTransformation,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = ancho,
             )
