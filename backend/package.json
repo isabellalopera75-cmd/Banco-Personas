@@ -4,7 +4,14 @@
   "main": "index.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "dev": "nodemon src/server.js",
+    "crear-admin": "node scripts/crear-admin.js",
+    "test": "node --test src/",
+    "test:integracion": "node test/integracion-auth.js",
+    "test:personas": "node test/integracion-personas.js",
+    "test:conflictos": "node test/integracion-conflictos.js",
+    "test:reset": "node test/reiniciar-base.js",
+    "test:todo": "npm test && npm run test:reset && npm run test:integracion && npm run test:reset && npm run test:personas && npm run test:reset && npm run test:conflictos"
   },
   "keywords": [],
   "author": "",
