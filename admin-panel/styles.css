@@ -271,6 +271,15 @@ tbody tr:hover { background: var(--bg); }
     width: min(100%, 46rem);
     background: var(--surface);
     color: var(--ink);
+
+    /* Un <dialog> modal se centra porque el navegador le pone margin:auto.
+       El reset de arriba (* { margin: 0 }) se lo pisa, y el diálogo termina
+       pegado al borde superior izquierdo. Se lo devolvemos a mano. */
+    margin: auto;
+
+    /* Un historial largo no puede empujar los botones fuera de la pantalla. */
+    max-height: 88vh;
+    overflow-y: auto;
 }
 
 .dialogo::backdrop { background: rgba(15, 30, 35, 0.45); }
