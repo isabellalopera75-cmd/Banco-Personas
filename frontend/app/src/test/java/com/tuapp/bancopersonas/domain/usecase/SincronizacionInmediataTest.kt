@@ -8,10 +8,9 @@ import org.junit.Test
  * Toda operación que se encola sin conexión tiene que pedir una subida
  * inmediata, no esperar a la ventana periódica.
  *
- * El caso que motivó estas pruebas es el alta: quien se registraba quedaba
- * guardado solo en el teléfono, volvía al login, y el servidor —que todavía
- * no conocía su documento— respondía 401. Con conexión y todo, no había
- * forma de entrar.
+ * El caso que motivó estas pruebas es el alta: el registro quedaba guardado
+ * solo en el teléfono y podía tardar minutos en subir, aunque hubiera señal.
+ * En campo eso significa que el registrador se va creyendo que ya está.
  */
 class SincronizacionInmediataTest {
 
@@ -21,7 +20,7 @@ class SincronizacionInmediataTest {
 
     @Test
     fun `el alta pide la sincronizacion despues de guardar en el dispositivo`() = runBlocking {
-        CrearPersonaUseCase(repository, scheduler)(persona(), "contrasena-larga")
+        CrearPersonaUseCase(repository, scheduler)(persona())
 
         // El orden importa: si se pidiera la sincronización antes de guardar,
         // el worker podría leer la cola cuando la operación todavía no está.
@@ -33,7 +32,7 @@ class SincronizacionInmediataTest {
         val repositorioQueFalla = RepositorioFalso(pasos, fallar = true)
 
         runCatching {
-            runBlocking { CrearPersonaUseCase(repositorioQueFalla, scheduler)(persona(), "x") }
+            runBlocking { CrearPersonaUseCase(repositorioQueFalla, scheduler)(persona()) }
         }
 
         // No hay nada que subir: pedir una corrida solo gastaría batería.
