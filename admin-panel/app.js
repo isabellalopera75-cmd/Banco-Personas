@@ -67,16 +67,24 @@
             throw new Error('No se pudo contactar al servidor. Revisá tu conexión.');
         }
 
-        // La sesión venció o la cuenta se desactivó. Seguir mostrando el panel
-        // con datos viejos sería peor que sacar a la persona al login.
-        if (respuesta.status === 401) {
+        let cuerpo = null;
+        try { cuerpo = await respuesta.json(); } catch { /* 204 y similares */ }
+
+        /*
+         * Un 401 significa dos cosas distintas según si había token.
+         *
+         * CON token: la sesión venció o la cuenta se desactivó. Seguir
+         * mostrando el panel con datos viejos sería peor que devolver al login.
+         *
+         * SIN token: es el login rechazando credenciales. Decirle "la sesión
+         * venció" a alguien que acaba de tipear mal su contraseña lo manda a
+         * buscar un problema que no existe.
+         */
+        if (respuesta.status === 401 && sesion.token) {
             sesion.cerrar();
             mostrarLogin('La sesión venció. Volvé a entrar.');
             throw new Error('Sesión vencida');
         }
-
-        let cuerpo = null;
-        try { cuerpo = await respuesta.json(); } catch { /* 204 y similares */ }
 
         if (!respuesta.ok) {
             throw new Error((cuerpo && cuerpo.error) || `Error ${respuesta.status}`);
