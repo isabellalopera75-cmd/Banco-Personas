@@ -2,93 +2,85 @@ package com.tuapp.bancopersonas.presentation.usuario
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.tuapp.bancopersonas.data.local.entity.HistorialEntity
+import com.tuapp.bancopersonas.data.local.SessionManager
+import com.tuapp.bancopersonas.data.local.dao.PersonaDao
+import com.tuapp.bancopersonas.data.mapper.toEntity
+import com.tuapp.bancopersonas.data.remote.PersonaApi
 import com.tuapp.bancopersonas.domain.model.Persona
 import com.tuapp.bancopersonas.domain.repository.PersonaRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class UsuarioUiState(
-    val persona: Persona? = null,
-    val historial: List<HistorialEntity> = emptyList(),
-    val isEditing: Boolean = false,
-    val isSyncingHistory: Boolean = false,
-    val ganadorSemana: Persona? = null,
-    val isLoadingGanador: Boolean = true,
-    val isOffline: Boolean = false
+    val sinConexion: Boolean = false,
+    val actualizando: Boolean = false,
 )
 
+/**
+ * La pantalla del rol usuario: sus propios datos, de solo lectura.
+ *
+ * Es la ruta más simple de las tres. Como no escribe nunca, no necesita cola
+ * de salida ni versión base, y no puede generar un conflicto ni queriendo. Lo
+ * único que guarda este dispositivo es una fila: la suya.
+ */
 @HiltViewModel
 class UsuarioViewModel @Inject constructor(
-    private val repository: PersonaRepository
+    private val repository: PersonaRepository,
+    private val personaDao: PersonaDao,
+    private val api: PersonaApi,
+    private val sessionManager: SessionManager,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(UsuarioUiState())
-    val uiState: StateFlow<UsuarioUiState> = _uiState
+    private val _estado = MutableStateFlow(UsuarioUiState())
+    val estado: StateFlow<UsuarioUiState> = _estado.asStateFlow()
 
-    private var personaId: String? = null
+    private val personaId: String = sessionManager.personaId.orEmpty()
 
-    fun init(id: String) {
-        if (personaId == id) return
-        personaId = id
-        
+    val persona: StateFlow<Persona?> =
+        repository.observarPersona(personaId)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    init { refrescar() }
+
+    /**
+     * Intenta traer la versión más reciente. Si no hay señal no pasa nada
+     * malo: se sigue mostrando lo guardado, que es exactamente para lo que se
+     * guardó.
+     */
+    fun refrescar() {
+        if (personaId.isBlank()) return
+
         viewModelScope.launch {
-            // Observar persona
-            launch {
-                repository.observarPersonas().collect { personas ->
-                    val me = personas.find { it.id == id }
-                    _uiState.update { it.copy(persona = me) }
+            _estado.update { it.copy(actualizando = true) }
+            try {
+                val respuesta = api.obtenerPorId(personaId)
+                if (respuesta.isSuccessful) {
+                    respuesta.body()?.let { personaDao.guardar(it.toEntity()) }
+                    _estado.update { it.copy(actualizando = false, sinConexion = false) }
+                } else {
+                    _estado.update { it.copy(actualizando = false) }
                 }
-            }
-            // Observar historial
-            launch {
-                repository.observarHistorial(id).collect { hist ->
-                    _uiState.update { it.copy(historial = hist) }
-                }
-            }
-            
-            // Sincronizar historial con backend
-            _uiState.update { it.copy(isSyncingHistory = true) }
-            repository.sincronizarHistorial(id)
-            _uiState.update { it.copy(isSyncingHistory = false) }
-
-            // Cargar ganador semana
-            launch {
-                val result = repository.getGanadorSemana()
-                result.onSuccess { ganador ->
-                    _uiState.update { it.copy(ganadorSemana = ganador, isLoadingGanador = false, isOffline = false) }
-                }.onFailure {
-                    _uiState.update { it.copy(isLoadingGanador = false, isOffline = true) }
-                }
+            } catch (e: Exception) {
+                _estado.update { it.copy(actualizando = false, sinConexion = true) }
             }
         }
     }
 
-    fun setEditing(isEditing: Boolean) {
-        _uiState.update { it.copy(isEditing = isEditing) }
-    }
-
-    fun guardarCambios(nombre: String, documento: String, telefono: String) {
-        val currentPersona = _uiState.value.persona ?: return
+    fun cerrarSesion(alSalir: () -> Unit) {
         viewModelScope.launch {
-            val actualizada = currentPersona.copy(
-                nombre = nombre,
-                documento = documento,
-                telefono = telefono
-            )
-            repository.editarPersona(actualizada)
-            setEditing(false)
-            repository.sincronizarHistorial(currentPersona.id) // Refrescar historial
-        }
-    }
-
-    fun revertirA(historial: HistorialEntity) {
-        val currentPersona = _uiState.value.persona ?: return
-        viewModelScope.launch {
-            repository.revertirHistorial(currentPersona, historial)
-            repository.sincronizarHistorial(currentPersona.id) // Refrescar historial
+            // El rol usuario nunca tiene cola pendiente, así que esto no puede
+            // fallar por ese motivo. Se usa el mismo camino igual: la regla de
+            // no borrar sobre trabajo sin enviar vive en un solo lugar.
+            repository.limpiarDatosLocales()
+            sessionManager.cerrarSesion()
+            alSalir()
         }
     }
 }

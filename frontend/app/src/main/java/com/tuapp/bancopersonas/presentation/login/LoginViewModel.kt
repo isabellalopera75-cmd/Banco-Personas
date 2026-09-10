@@ -1,169 +1,214 @@
 package com.tuapp.bancopersonas.presentation.login
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tuapp.bancopersonas.data.local.LocalPasswordVerifier
 import com.tuapp.bancopersonas.data.local.SessionManager
-import com.tuapp.bancopersonas.data.local.dao.PersonaDao
-import com.tuapp.bancopersonas.data.mapper.toDomain
 import com.tuapp.bancopersonas.data.mapper.toEntity
+import com.tuapp.bancopersonas.data.local.dao.PersonaDao
 import com.tuapp.bancopersonas.data.remote.AuthApi
-import com.tuapp.bancopersonas.data.remote.dto.LoginRequest
-import com.tuapp.bancopersonas.domain.model.Persona
+import com.tuapp.bancopersonas.data.remote.dto.LoginOperadorRequest
+import com.tuapp.bancopersonas.data.remote.dto.LoginPersonaRequest
+import com.tuapp.bancopersonas.domain.model.TipoDocumento
+import com.tuapp.bancopersonas.domain.sync.SyncScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.IOException
 import javax.inject.Inject
 
+enum class ModoLogin { OPERADOR, PERSONA }
+
 data class LoginUiState(
-    val nombre: String = "",
-    val documento: String = "",
+    val modo: ModoLogin = ModoLogin.OPERADOR,
+    val usuario: String = "",
     val password: String = "",
-    val rol: String = "usuario", // "admin" o "usuario"
+    val tipoDocumento: TipoDocumento = TipoDocumento.CC,
+    val numeroDocumento: String = "",
     val cargando: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val avisoSinConexion: String? = null,
 )
+
+/** Adónde ir después de entrar. */
+sealed interface DestinoLogin {
+    data class Operador(val rol: String, val sinConexion: Boolean) : DestinoLogin
+    data class Persona(val personaId: String, val sinConexion: Boolean) : DestinoLogin
+}
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
     private val authApi: AuthApi,
     private val personaDao: PersonaDao,
     private val sessionManager: SessionManager,
-    private val passwordVerifier: LocalPasswordVerifier
+    private val verificador: LocalPasswordVerifier,
+    private val syncScheduler: SyncScheduler,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(LoginUiState())
-    val uiState: StateFlow<LoginUiState> = _uiState
+    private val _estado = MutableStateFlow(LoginUiState())
+    val estado: StateFlow<LoginUiState> = _estado.asStateFlow()
 
-    fun onNombreChange(valor: String) = _uiState.update { it.copy(nombre = valor, error = null) }
-    fun onDocumentoChange(valor: String) = _uiState.update { it.copy(documento = valor, error = null) }
-    fun onPasswordChange(valor: String) = _uiState.update { it.copy(password = valor, error = null) }
-    fun onRolChange(valor: String) = _uiState.update { it.copy(rol = valor, error = null) }
+    private val _destino = MutableStateFlow<DestinoLogin?>(null)
+    val destino: StateFlow<DestinoLogin?> = _destino.asStateFlow()
 
-    fun login(onSuccess: (String, Persona?) -> Unit) {
-        // Se recortan los espacios antes de cualquier otra cosa. El servidor
-        // compara el usuario de administración con igualdad estricta, así que
-        // un espacio invisible al final —que los teclados agregan solos al
-        // autocompletar— alcanzaba para rechazar credenciales correctas.
-        val estado = _uiState.value.let {
-            it.copy(nombre = it.nombre.trim(), documento = it.documento.trim())
-        }
+    fun cambiarModo(modo: ModoLogin) =
+        _estado.update { it.copy(modo = modo, error = null, avisoSinConexion = null) }
 
-        validar(estado)?.let { mensaje ->
-            _uiState.update { it.copy(error = mensaje) }
+    fun cambiarUsuario(valor: String) = _estado.update { it.copy(usuario = valor, error = null) }
+    fun cambiarPassword(valor: String) = _estado.update { it.copy(password = valor, error = null) }
+    fun cambiarTipoDocumento(valor: TipoDocumento) = _estado.update { it.copy(tipoDocumento = valor, error = null) }
+    fun cambiarNumeroDocumento(valor: String) =
+        _estado.update { it.copy(numeroDocumento = valor.filter { c -> c.isDigit() || c.isLetter() }, error = null) }
+
+    fun destinoConsumido() {
+        _destino.value = null
+    }
+
+    // ======================================================================
+    // Operador: admin y registrador
+    // ======================================================================
+    fun entrarComoOperador() {
+        val usuario = _estado.value.usuario.trim()
+        val password = _estado.value.password
+
+        if (usuario.isBlank() || password.isBlank()) {
+            _estado.update { it.copy(error = "Completá usuario y contraseña") }
             return
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(cargando = true, error = null) }
+            _estado.update { it.copy(cargando = true, error = null, avisoSinConexion = null) }
 
             try {
-                val respuesta = authApi.login(
-                    LoginRequest(
-                        rol = estado.rol,
-                        nombre = if (estado.rol == "admin") estado.nombre else null,
-                        documento = if (estado.rol == "usuario") estado.documento else null,
-                        password = estado.password
-                    )
-                )
-
+                val respuesta = authApi.loginOperador(LoginOperadorRequest(usuario, password))
                 val cuerpo = respuesta.body()
 
-                if (respuesta.isSuccessful && cuerpo?.success == true && cuerpo.token != null) {
-                    sessionManager.token = cuerpo.token
-                    sessionManager.rol = cuerpo.rol
-                    sessionManager.personaId = cuerpo.persona?.id
-
-                    // Verificador local: permite volver a entrar sin conexión.
-                    // Se deriva de la contraseña que el servidor acaba de dar
-                    // por válida, así que no se confía en nada sin verificar.
-                    if (estado.rol == "usuario") {
-                        sessionManager.guardarVerificador(
-                            estado.documento,
-                            passwordVerifier.derivar(estado.password)
+                when {
+                    respuesta.isSuccessful && cuerpo?.token != null && cuerpo.usuario != null -> {
+                        sessionManager.abrirSesionOperador(
+                            id = cuerpo.usuario.id,
+                            usuario = cuerpo.usuario.usuario,
+                            rolNuevo = cuerpo.usuario.rol,
+                            tokenNuevo = cuerpo.token,
                         )
-                    }
 
-                    val dto = cuerpo.persona
-                    if (dto != null) {
-                        // No se pisan cambios locales sin subir.
-                        val local = personaDao.obtenerPorId(dto.id)
-                        if (local == null || local.syncStatus == "SYNCED") {
-                            personaDao.guardar(dto.toEntity())
-                        }
-                    }
-
-                    _uiState.update { it.copy(cargando = false, password = "") }
-                    onSuccess(cuerpo.rol ?: estado.rol, dto?.toDomain())
-                } else {
-                    _uiState.update {
-                        it.copy(
-                            error = cuerpo?.error ?: "Documento o contraseña incorrectos",
-                            cargando = false
+                        // Se guarda el verificador recién ahora, con la
+                        // contraseña ya confirmada por el servidor. Es lo que
+                        // le permite a este registrador volver a entrar en el
+                        // campo, sin señal.
+                        sessionManager.guardarVerificador(usuario, verificador.derivar(password))
+                        sessionManager.guardarPerfilOffline(
+                            usuario, cuerpo.usuario.id, cuerpo.usuario.rol
                         )
+
+                        syncScheduler.sincronizarAhora()
+                        _estado.update { it.copy(cargando = false, password = "") }
+                        _destino.value = DestinoLogin.Operador(cuerpo.usuario.rol, false)
                     }
+
+                    respuesta.code() == 403 -> fallar("La cuenta está desactivada. Hablá con el administrador.")
+                    respuesta.code() == 429 -> fallar("Demasiados intentos. Esperá unos minutos.")
+                    else -> fallar("Usuario o contraseña incorrectos")
                 }
+            } catch (e: IOException) {
+                entrarSinConexion(usuario, password)
             } catch (e: Exception) {
-                Log.d("SYNC_DEBUG", "Login sin conexión: ${e.message}")
-                intentarLoginSinConexion(estado, onSuccess)
+                fallar("No se pudo iniciar sesión: ${e.message}")
             }
         }
     }
 
-    private fun validar(estado: LoginUiState): String? = when {
-        estado.password.isBlank() -> "Ingresá tu contraseña"
-        estado.rol == "admin" && estado.nombre.isBlank() -> "Ingresá el usuario de administrador"
-        estado.rol == "usuario" && estado.documento.isBlank() -> "Ingresá tu documento"
-        else -> null
-    }
+    private fun entrarSinConexion(usuario: String, password: String) {
+        val guardado = sessionManager.obtenerVerificador(usuario)
+        val perfil = sessionManager.perfilOffline(usuario)
 
-    /**
-     * Entrada sin conexión.
-     *
-     * Solo funciona para participantes que ya iniciaron sesión antes en este
-     * dispositivo: la contraseña se valida contra el verificador local que se
-     * derivó en ese momento.
-     *
-     * El acceso de administración queda deliberadamente afuera. Las
-     * credenciales de admin ya no viven dentro del APK, y no van a volver:
-     * cualquiera puede descargar la aplicación y leer lo que tenga adentro.
-     */
-    private suspend fun intentarLoginSinConexion(
-        estado: LoginUiState,
-        onSuccess: (String, Persona?) -> Unit
-    ) {
-        if (estado.rol != "usuario") {
-            _uiState.update {
-                it.copy(
-                    error = "El acceso de administrador necesita conexión a internet.",
-                    cargando = false
-                )
-            }
+        if (guardado == null || perfil == null) {
+            fallar(
+                "Sin conexión y este usuario nunca entró en este teléfono. " +
+                    "La primera vez hay que iniciar sesión con internet."
+            )
             return
         }
 
-        val verificador = sessionManager.obtenerVerificador(estado.documento)
-        val persona = personaDao.obtenerPorDocumento(estado.documento)
-
-        val credencialValida = verificador != null &&
-            persona != null &&
-            passwordVerifier.verificar(estado.password, verificador)
-
-        if (!credencialValida) {
-            _uiState.update {
-                it.copy(
-                    error = "No se pudo conectar al servidor. Sin internet solo " +
-                        "podés entrar si ya iniciaste sesión antes en este dispositivo.",
-                    cargando = false
-                )
-            }
+        if (!verificador.verificar(password, guardado)) {
+            fallar("Usuario o contraseña incorrectos")
             return
         }
 
-        _uiState.update { it.copy(cargando = false, password = "") }
-        onSuccess("usuario", persona!!.toDomain())
+        val (id, rol) = perfil
+
+        // El administrador trabaja siempre con conexión: su panel consulta
+        // todo contra el servidor. Dejarlo entrar sin señal solo le mostraría
+        // pantallas vacías sin explicarle por qué.
+        if (rol != SessionManager.ROL_REGISTRADOR) {
+            fallar("El panel de administración necesita conexión a internet.")
+            return
+        }
+
+        sessionManager.abrirSesionOperador(id, usuario, rol, tokenNuevo = null)
+        _estado.update { it.copy(cargando = false, password = "") }
+        _destino.value = DestinoLogin.Operador(rol, sinConexion = true)
     }
+
+    // ======================================================================
+    // Persona del padrón
+    // ======================================================================
+    fun entrarComoPersona() {
+        val tipo = _estado.value.tipoDocumento
+        val numero = _estado.value.numeroDocumento.trim()
+
+        if (numero.isBlank()) {
+            _estado.update { it.copy(error = "Escribí tu número de documento") }
+            return
+        }
+
+        viewModelScope.launch {
+            _estado.update { it.copy(cargando = true, error = null, avisoSinConexion = null) }
+
+            try {
+                val respuesta = authApi.loginPersona(LoginPersonaRequest(tipo.name, numero))
+                val cuerpo = respuesta.body()
+
+                when {
+                    respuesta.isSuccessful && cuerpo?.persona != null -> {
+                        // Se guarda la fila para que la próxima vez pueda
+                        // entrar sin señal. Es una sola: la suya.
+                        personaDao.guardar(cuerpo.persona.toEntity())
+                        sessionManager.abrirSesionPersona(cuerpo.persona.id, cuerpo.token)
+                        _estado.update { it.copy(cargando = false) }
+                        _destino.value = DestinoLogin.Persona(cuerpo.persona.id, false)
+                    }
+
+                    respuesta.code() == 429 -> fallar("Demasiados intentos. Esperá unos minutos.")
+                    else -> fallar("No encontramos un registro con ese documento")
+                }
+            } catch (e: IOException) {
+                // Sin conexión se busca en lo que quedó guardado. Como el
+                // cierre de sesión borra la base local, lo único que puede
+                // haber acá es el registro de quien entró antes en este mismo
+                // teléfono: no hay forma de consultar los datos de un tercero.
+                val local = personaDao.obtenerPorDocumento(tipo.name, numero)
+
+                if (local == null) {
+                    fallar(
+                        "Sin conexión y no hay datos guardados en este teléfono. " +
+                            "La primera vez hay que entrar con internet."
+                    )
+                    return@launch
+                }
+
+                sessionManager.abrirSesionPersona(local.id, tokenNuevo = null)
+                _estado.update { it.copy(cargando = false) }
+                _destino.value = DestinoLogin.Persona(local.id, sinConexion = true)
+            } catch (e: Exception) {
+                fallar("No se pudo iniciar sesión: ${e.message}")
+            }
+        }
+    }
+
+    private fun fallar(mensaje: String) =
+        _estado.update { it.copy(cargando = false, error = mensaje) }
 }

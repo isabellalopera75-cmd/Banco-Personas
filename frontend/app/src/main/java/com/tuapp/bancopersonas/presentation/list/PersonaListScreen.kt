@@ -1,187 +1,198 @@
 package com.tuapp.bancopersonas.presentation.list
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.HourglassEmpty
+import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.ReportProblem
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tuapp.bancopersonas.domain.model.Persona
 import com.tuapp.bancopersonas.domain.model.SyncStatus
-import com.tuapp.bancopersonas.presentation.form.PersonaFormScreen
-import com.tuapp.bancopersonas.ui.theme.WinPlayPink
-import com.tuapp.bancopersonas.ui.theme.WinPlaySurface
+import com.tuapp.bancopersonas.ui.components.CampoTexto
+import com.tuapp.bancopersonas.ui.components.Etiqueta
+import com.tuapp.bancopersonas.ui.theme.WinPlayDarkBg
+import com.tuapp.bancopersonas.ui.theme.WinPlayDarkBgTop
+import com.tuapp.bancopersonas.ui.theme.WinPlayError
+import com.tuapp.bancopersonas.ui.theme.WinPlayPinkSoft
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonaListScreen(
-    onLogout: () -> Unit,
-    viewModel: PersonaListViewModel = hiltViewModel()
+    onNuevaPersona: () -> Unit,
+    onEditarPersona: (String) -> Unit,
+    onVerConflictos: () -> Unit,
+    onSalir: () -> Unit,
+    viewModel: PersonaListViewModel = hiltViewModel(),
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    var mostrarFormulario by remember { mutableStateOf(false) }
-    var personaEnEdicion by remember { mutableStateOf<Persona?>(null) }
-    var personaAEliminar by remember { mutableStateOf<Persona?>(null) }
-    var searchQuery by remember { mutableStateOf("") }
+    val estado by viewModel.estado.collectAsStateWithLifecycle()
+    val personas by viewModel.personas.collectAsStateWithLifecycle()
 
-    val personasFiltradas = uiState.personas.filter {
-        it.nombre.contains(searchQuery, ignoreCase = true) || 
-        it.documento.contains(searchQuery, ignoreCase = true)
-    }
+    var aEliminar by remember { mutableStateOf<Persona?>(null) }
 
-    if (mostrarFormulario) {
-        PersonaFormScreen(
-            personaExistente = personaEnEdicion,
-            onPersonaGuardada = {
-                mostrarFormulario = false
-                personaEnEdicion = null
-            }
-        )
-        return
-    }
-
-    // Diálogo de confirmación
-    personaAEliminar?.let { persona ->
+    estado.bloqueoCierreSesion?.let { mensaje ->
         AlertDialog(
-            onDismissRequest = { personaAEliminar = null },
-            title = { Text("Confirmar eliminación") },
-            text = { Text("¿Estás seguro de que deseas eliminar a ${persona.nombre}? Esta acción no se puede deshacer.") },
+            onDismissRequest = viewModel::bloqueoConsumido,
+            title = { Text("No se puede cerrar sesión todavía") },
+            text = { Text(mensaje) },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.eliminarPersona(persona.id)
-                        personaAEliminar = null
-                    },
-                    colors = ButtonDefaults.textButtonColors(contentColor = WinPlayPink)
-                ) {
-                    Text("Eliminar")
-                }
+                TextButton(onClick = {
+                    viewModel.bloqueoConsumido()
+                    viewModel.sincronizar()
+                }) { Text("Sincronizar ahora") }
             },
             dismissButton = {
-                TextButton(onClick = { personaAEliminar = null }) {
-                    Text("Cancelar", color = Color.Gray)
-                }
+                TextButton(onClick = viewModel::bloqueoConsumido) { Text("Entendido") }
             },
-            containerColor = WinPlaySurface,
-            titleContentColor = Color.White,
-            textContentColor = Color.LightGray
+        )
+    }
+
+    aEliminar?.let { persona ->
+        AlertDialog(
+            onDismissRequest = { aEliminar = null },
+            title = { Text("Dar de baja") },
+            text = { Text("¿Dar de baja a ${persona.nombreCompleto}? Queda registrado en el historial.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.eliminar(persona.id)
+                    aEliminar = null
+                }) { Text("Dar de baja") }
+            },
+            dismissButton = { TextButton(onClick = { aEliminar = null }) { Text("Cancelar") } },
         )
     }
 
     Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    personaEnEdicion = null
-                    mostrarFormulario = true
+        containerColor = Color.Transparent,
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text(
+                            if (viewModel.esAdmin) "Padrón completo" else "Mis registros",
+                            fontWeight = FontWeight.Bold,
+                        )
+                        if (viewModel.nombreUsuario.isNotBlank()) {
+                            Text(
+                                viewModel.nombreUsuario,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                 },
-                containerColor = WinPlayPink,
-                contentColor = Color.White
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Nuevo Participante")
-            }
-        }
-    ) { innerPadding ->
+                actions = {
+                    if (viewModel.esAdmin) {
+                        IconButton(onClick = onVerConflictos) {
+                            Icon(Icons.Default.ReportProblem, contentDescription = "Conflictos")
+                        }
+                    }
+                    IconButton(onClick = viewModel::sincronizar) {
+                        Icon(Icons.Default.Sync, contentDescription = "Sincronizar")
+                    }
+                    IconButton(onClick = { viewModel.cerrarSesion(onSalir) }) {
+                        Icon(Icons.Default.Logout, contentDescription = "Cerrar sesión")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+            )
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = onNuevaPersona,
+                icon = { Icon(Icons.Default.PersonAdd, contentDescription = null) },
+                text = { Text("Registrar") },
+                shape = MaterialTheme.shapes.small,
+            )
+        },
+    ) { relleno ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black)
-                .padding(innerPadding)
+                .background(Brush.verticalGradient(listOf(WinPlayDarkBgTop, WinPlayDarkBg)))
+                .padding(relleno)
+                .padding(horizontal = 16.dp),
         ) {
-            // Top Bar
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFFC02A35)) // Darker red
-                    .padding(24.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text("Panel WinPlay", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.People, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("${uiState.personas.size} participantes", color = Color.White, fontSize = 14.sp)
-                        }
-                    }
-                    IconButton(
-                        onClick = onLogout,
-                        modifier = Modifier
-                            .background(Color(0x33FFFFFF), CircleShape)
-                            .size(48.dp)
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Salir", tint = Color.White)
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Search Bar
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                placeholder = { Text("Buscar por nombre o documento...", color = Color.Gray) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Buscar", tint = Color.Gray) },
-                singleLine = true,
-                shape = RoundedCornerShape(50),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = WinPlaySurface,
-                    unfocusedContainerColor = WinPlaySurface,
-                    focusedBorderColor = Color.Transparent,
-                    unfocusedBorderColor = Color.Transparent,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White
-                )
+            BarraEstado(
+                pendientes = estado.pendientes,
+                sinConexion = estado.sinConexion,
+                enRevision = personas.count { it.syncStatus == SyncStatus.EN_REVISION },
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            CampoTexto(
+                valor = estado.busqueda,
+                onValorCambia = viewModel::cambiarBusqueda,
+                etiqueta = "Buscar por nombre o documento",
+                icono = Icons.Default.Search,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+            )
 
-            if (uiState.cargando) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = WinPlayPink)
+            if (personas.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = if (estado.busqueda.isBlank())
+                            "Todavía no registraste a nadie.\nTocá «Registrar» para empezar."
+                        else "Ningún registro coincide con la búsqueda.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
                 }
-            } else if (personasFiltradas.isEmpty()) {
-                EmptyState()
             } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    items(personasFiltradas) { persona ->
-                        PersonaCard(
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(personas, key = { it.id }) { persona ->
+                        TarjetaPersona(
                             persona = persona,
-                            onEditClick = {
-                                personaEnEdicion = persona
-                                mostrarFormulario = true
-                            },
-                            onDeleteClick = { personaAEliminar = persona }
+                            onEditar = { onEditarPersona(persona.id) },
+                            onEliminar = { aEliminar = persona },
                         )
                     }
+                    item { Spacer(Modifier.height(80.dp)) }
                 }
             }
         }
@@ -189,130 +200,108 @@ fun PersonaListScreen(
 }
 
 @Composable
-fun EmptyState() {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            imageVector = Icons.Default.CloudOff,
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-            tint = Color.DarkGray
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text("No hay participantes", style = MaterialTheme.typography.headlineSmall, color = Color.Gray)
-        Text("Usa el botón + para empezar", style = MaterialTheme.typography.bodyMedium, color = Color.DarkGray)
-    }
-}
+private fun BarraEstado(pendientes: Int, sinConexion: Boolean, enRevision: Int) {
+    if (pendientes == 0 && !sinConexion && enRevision == 0) return
 
-@Composable
-fun PersonaCard(
-    persona: Persona,
-    onEditClick: () -> Unit,
-    onDeleteClick: () -> Unit
-) {
-    Card(
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = MaterialTheme.shapes.small,
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = WinPlaySurface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2A2A35))
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .size(50.dp)
-                    .background(Color(0xFFC02A35), CircleShape), // Dark red
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = persona.nombre.take(1).uppercase(),
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp
+            if (sinConexion) {
+                LineaEstado(
+                    Icons.Default.CloudOff,
+                    "Sin conexión. Podés seguir registrando: se envía solo cuando haya señal.",
+                    MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            
-            Spacer(modifier = Modifier.width(16.dp))
-            
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = persona.nombre,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    SyncStatusIcon(status = persona.syncStatus)
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Badge, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.Gray)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = persona.documento, color = Color.Gray, fontSize = 12.sp)
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.Gray)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = persona.telefono, color = Color.Gray, fontSize = 12.sp)
-                }
+            if (pendientes > 0) {
+                LineaEstado(
+                    Icons.Default.CloudUpload,
+                    "$pendientes cambio(s) esperando para enviarse.",
+                    WinPlayPinkSoft,
+                )
             }
-
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                IconButton(
-                    onClick = onEditClick,
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(Color(0xFF3A1C22), RoundedCornerShape(8.dp))
-                ) {
-                    Icon(Icons.Default.Edit, contentDescription = "Editar", tint = WinPlayPink, modifier = Modifier.size(18.dp))
-                }
-                IconButton(
-                    onClick = onDeleteClick,
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(Color(0xFF3A1C22), RoundedCornerShape(8.dp))
-                ) {
-                    Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = Color.LightGray, modifier = Modifier.size(18.dp))
-                }
+            if (enRevision > 0) {
+                LineaEstado(
+                    Icons.Default.ReportProblem,
+                    "$enRevision registro(s) en revisión del administrador. " +
+                        "Los datos están guardados en el servidor.",
+                    WinPlayError,
+                )
             }
         }
     }
 }
 
 @Composable
-fun SyncStatusIcon(status: SyncStatus) {
-    val icon: ImageVector
-    val color: Color
+private fun LineaEstado(icono: androidx.compose.ui.graphics.vector.ImageVector, texto: String, color: Color) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(icono, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
+        Text(texto, style = MaterialTheme.typography.bodySmall, color = color)
+    }
+}
 
-    when (status) {
-        SyncStatus.SYNCED -> {
-            icon = Icons.Default.Cloud
-            color = Color(0xFF4CAF50)
-        }
-        SyncStatus.PENDING -> {
-            icon = Icons.Default.Sync
-            color = Color(0xFFFF9800)
-        }
-        SyncStatus.CONFLICT -> {
-            icon = Icons.Default.Warning
-            color = Color(0xFFF44336)
+@Composable
+private fun TarjetaPersona(persona: Persona, onEditar: () -> Unit, onEliminar: () -> Unit) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onEditar),
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    persona.nombreCompleto,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    persona.documentoCompleto,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(6.dp))
+                EtiquetaSync(persona.syncStatus)
+            }
+
+            IconButton(onClick = onEditar) {
+                Icon(Icons.Default.Edit, contentDescription = "Editar", modifier = Modifier.size(20.dp))
+            }
+            IconButton(onClick = onEliminar) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Dar de baja",
+                    tint = WinPlayError,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
         }
     }
-    
-    Icon(
-        imageVector = icon,
-        contentDescription = null,
-        tint = color,
-        modifier = Modifier.size(16.dp)
-    )
+}
+
+/**
+ * `EN_REVISION` tiene su propio texto y no dice "error".
+ *
+ * No es un fallo del registrador ni un dato perdido: el servidor lo recibió,
+ * no lo pudo aplicar solo y lo dejó esperando una decisión. Decirlo así evita
+ * que alguien vuelva a cargar el mismo registro creyendo que se perdió.
+ */
+@Composable
+private fun EtiquetaSync(estado: SyncStatus) = when (estado) {
+    SyncStatus.SYNCED -> Etiqueta("Guardado", Color(0xFF6FCF97), Icons.Default.CheckCircle)
+    SyncStatus.PENDING -> Etiqueta("Sin enviar", WinPlayPinkSoft, Icons.Default.HourglassEmpty)
+    SyncStatus.EN_REVISION ->
+        Etiqueta("En revisión del administrador", WinPlayError, Icons.Default.ReportProblem)
 }
