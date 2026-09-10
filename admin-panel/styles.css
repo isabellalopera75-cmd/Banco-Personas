@@ -300,6 +300,20 @@ tbody tr:hover { background: var(--bg); }
 }
 .campo-form input:focus { outline: none; border-color: var(--primary); background: #fff; }
 
+/* Formulario de edición: dos columnas para que la ficha entre sin scroll. */
+.grilla-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 1rem;
+    margin-top: 0.5rem;
+}
+
+@media (max-width: 640px) {
+    .grilla-form { grid-template-columns: 1fr; }
+}
+
+.acciones-fila { display: flex; gap: 0.4rem; white-space: nowrap; }
+
 /*
  * La comparación es el corazón del panel: dos versiones del mismo registro,
  * enfrentadas. En el teléfono esto era un diálogo con casillas apiladas y el

@@ -482,9 +482,13 @@
                   <td class="celda-tenue">${esc(String(p.fecha_nacimiento).slice(0, 10))}</td>
                   <td class="celda-tenue">${esc(vacio(p.telefono))}</td>
                   <td><span class="pill pill-neutro">${esc(p.registrado_por)}</span></td>
-                  <td>
+                  <td class="acciones-fila">
+                    <button class="btn btn-secundario btn-chico"
+                            data-editar="${esc(p.id)}">Editar</button>
                     <button class="btn btn-secundario btn-chico"
                             data-historial="${esc(p.id)}">Historial</button>
+                    <button class="btn btn-peligro btn-chico"
+                            data-baja="${esc(p.id)}">Dar de baja</button>
                   </td>
                 </tr>`).join('')}
             </tbody>
@@ -493,9 +497,143 @@
     }
 
     $('#tabla-padron').addEventListener('click', (e) => {
-        const boton = e.target.closest('[data-historial]');
-        if (boton) verHistorial(boton.dataset.historial);
+        const historial = e.target.closest('[data-historial]');
+        const editar = e.target.closest('[data-editar]');
+        const baja = e.target.closest('[data-baja]');
+
+        if (historial) verHistorial(historial.dataset.historial);
+        if (editar) abrirEdicion(editar.dataset.editar);
+        if (baja) confirmarBaja(baja.dataset.baja);
     });
+
+    /* Lo que el administrador puede modificar. Es la misma lista que acepta el
+       servidor: si dejaran de coincidir, el campo de más se enviaría, el
+       servidor lo devolvería en `rechazados`, y el cambio parecería guardarse
+       sin guardarse. */
+    const CAMPOS_EDITABLES = [
+        ['tipo_documento', 'Tipo de documento', 'text'],
+        ['numero_documento', 'Número de documento', 'text'],
+        ['primer_nombre', 'Primer nombre', 'text'],
+        ['segundo_nombre', 'Segundo nombre', 'text'],
+        ['primer_apellido', 'Primer apellido', 'text'],
+        ['segundo_apellido', 'Segundo apellido', 'text'],
+        ['fecha_nacimiento', 'Fecha de nacimiento', 'date'],
+        ['sexo', 'Sexo', 'text'],
+        ['telefono', 'Teléfono', 'text'],
+    ];
+
+    function abrirEdicion(personaId) {
+        const p = personasCargadas.find((x) => x.id === personaId);
+        if (!p) return;
+
+        const campos = CAMPOS_EDITABLES.map(([campo, etiqueta, tipo]) => {
+            const valor = campo === 'fecha_nacimiento'
+                ? String(p[campo] || '').slice(0, 10)
+                : (p[campo] ?? '');
+            return `
+            <div class="campo-form">
+                <label for="ed-${campo}">${esc(etiqueta)}</label>
+                <input id="ed-${campo}" type="${tipo}" data-campo="${campo}"
+                       value="${esc(valor)}">
+            </div>`;
+        }).join('');
+
+        $('#dialogo-cuerpo').innerHTML = `
+        <div class="dialogo-inner">
+            <h3>Editar registro</h3>
+            <p class="sub">
+                Registrado por <strong>${esc(p.registrado_por)}</strong>.
+                Se envían solo los campos que cambies, no la ficha entera: así, si un
+                registrador está editando otro campo al mismo tiempo, los dos cambios
+                conviven en vez de pisarse.
+            </p>
+            <div class="grilla-form">${campos}</div>
+            <div class="dialogo-acciones">
+                <button class="btn btn-secundario" data-accion="cerrar">Cancelar</button>
+                <button class="btn btn-primary" id="btn-guardar-persona">Guardar cambios</button>
+            </div>
+        </div>`;
+
+        $('#dialogo').showModal();
+
+        $('#btn-guardar-persona').addEventListener('click', async () => {
+            const normal = (v) => (v === null || v === undefined ? '' : String(v).trim());
+
+            // Solo lo que de verdad cambió. Mandar la ficha completa convertiría
+            // cualquier edición simultánea en un choque que el servidor sabe evitar.
+            const cambios = {};
+            document.querySelectorAll('.grilla-form input[data-campo]').forEach((input) => {
+                const campo = input.dataset.campo;
+                const antes = campo === 'fecha_nacimiento'
+                    ? String(p[campo] || '').slice(0, 10)
+                    : normal(p[campo]);
+                const ahora = normal(input.value);
+                if (antes !== ahora) cambios[campo] = ahora === '' ? null : ahora;
+            });
+
+            if (Object.keys(cambios).length === 0) {
+                avisar('No cambiaste nada');
+                return;
+            }
+
+            try {
+                const resultado = await api(`/api/personas/${personaId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ version_base: p.version, cambios }),
+                });
+                avisar(resultado.mergeado
+                    ? 'Guardado. Se combinó con un cambio que hizo otra persona.'
+                    : `Guardado: ${Object.keys(cambios).length} campo(s)`);
+                $('#dialogo').close();
+                cargarPadron();
+            } catch (err) {
+                // Un 409 acá significa que alguien tocó los mismos campos mientras
+                // este formulario estaba abierto. El intento quedó guardado como
+                // conflicto: no se perdió, hay que ir a resolverlo.
+                avisar(err.message);
+                cargarPadron();
+            }
+        });
+    }
+
+    function confirmarBaja(personaId) {
+        const p = personasCargadas.find((x) => x.id === personaId);
+        if (!p) return;
+
+        const nombre = [p.primer_nombre, p.primer_apellido].filter(Boolean).join(' ');
+
+        $('#dialogo-cuerpo').innerHTML = `
+        <div class="dialogo-inner">
+            <h3>Dar de baja</h3>
+            <p class="sub">
+                <strong>${esc(nombre)}</strong> — ${esc(p.tipo_documento)} ${esc(p.numero_documento)}.
+                <br><br>
+                El registro deja de aparecer en el padrón, pero no se borra: el historial
+                completo se conserva y ese documento vuelve a quedar disponible para un
+                alta nueva.
+            </p>
+            <div class="dialogo-acciones">
+                <button class="btn btn-secundario" data-accion="cerrar">Cancelar</button>
+                <button class="btn btn-peligro" id="btn-confirmar-baja">Dar de baja</button>
+            </div>
+        </div>`;
+
+        $('#dialogo').showModal();
+
+        $('#btn-confirmar-baja').addEventListener('click', async () => {
+            try {
+                await api(`/api/personas/${personaId}`, {
+                    method: 'DELETE',
+                    body: JSON.stringify({ version_base: p.version }),
+                });
+                avisar('Registro dado de baja');
+                $('#dialogo').close();
+                cargarPadron();
+            } catch (err) {
+                avisar(err.message);
+            }
+        });
+    }
 
     async function verHistorial(personaId) {
         const persona = personasCargadas.find((p) => p.id === personaId) || {};
