@@ -6,161 +6,132 @@ const config = require('../config');
 const firmarToken = (payload) =>
     jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
 
-const login = async (req, res) => {
-    const { rol, nombre, documento, password } = req.body;
+/**
+ * Hash señuelo, calculado una vez al arrancar.
+ *
+ * Si ante un usuario inexistente respondiéramos sin llamar a bcrypt, esa
+ * respuesta llegaría en microsegundos y la de una contraseña incorrecta en
+ * cientos de milisegundos. Esa diferencia es medible desde afuera y permite
+ * averiguar qué usuarios existen sin acertar una sola contraseña.
+ *
+ * Comparando siempre contra algo, las dos respuestas tardan lo mismo.
+ */
+const HASH_SENUELO = bcrypt.hashSync('ninguna cuenta usa esta contraseña', 12);
 
-    if (!password) {
-        return res.status(400).json({ success: false, error: 'La contraseña es obligatoria' });
+/**
+ * POST /api/auth/login-operador
+ *
+ * Entrada de admin y registrador: los que tienen cuenta en `usuarios`.
+ */
+const loginOperador = async (req, res) => {
+    const { usuario, password } = req.body || {};
+
+    if (!usuario || !password) {
+        return res
+            .status(400)
+            .json({ error: 'El usuario y la contraseña son obligatorios' });
     }
 
     try {
-        if (rol === 'admin') {
-            const usuarioCoincide = nombre === config.admin.usuario;
-            const passwordCoincide = await bcrypt.compare(password, config.admin.passwordHash);
+        // lower() para coincidir con el índice único de la tabla: si ahí
+        // "Ana" y "ana" son la misma cuenta, acá también tienen que serlo.
+        const resultado = await pool.query(
+            `SELECT id, usuario, password_hash, rol, activo
+               FROM usuarios
+              WHERE lower(usuario) = lower($1)`,
+            [String(usuario).trim()]
+        );
 
-            if (!usuarioCoincide || !passwordCoincide) {
-                return res
-                    .status(401)
-                    .json({ success: false, error: 'Credenciales incorrectas' });
-            }
+        const fila = resultado.rows[0];
 
-            return res.json({
-                success: true,
-                rol: 'admin',
-                token: firmarToken({ rol: 'admin' }),
-            });
+        const passwordCoincide = await bcrypt.compare(
+            String(password),
+            fila ? fila.password_hash : HASH_SENUELO
+        );
+
+        // Mismo mensaje para usuario inexistente y contraseña incorrecta: si
+        // fueran distintos, la respuesta permitiría enumerar cuentas.
+        if (!fila || !passwordCoincide) {
+            return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
         }
 
-        if (rol === 'usuario') {
-            if (!documento) {
-                return res
-                    .status(400)
-                    .json({ success: false, error: 'El documento es obligatorio' });
-            }
-
-            const resultado = await pool.query(
-                'SELECT * FROM personas WHERE documento = $1 AND deleted_at IS NULL',
-                [documento]
-            );
-
-            const persona = resultado.rows[0];
-            const passwordCoincide = persona
-                ? await bcrypt.compare(password, persona.password_hash)
-                : false;
-
-            if (!persona || !passwordCoincide) {
-                // Mismo mensaje para documento inexistente y contraseña errónea:
-                // así la respuesta no permite enumerar qué documentos existen.
-                return res
-                    .status(401)
-                    .json({ success: false, error: 'Documento o contraseña incorrectos' });
-            }
-
-            // El hash nunca sale del servidor.
-            const { password_hash, ...personaPublica } = persona;
-
-            return res.json({
-                success: true,
-                rol: 'usuario',
-                persona: personaPublica,
-                token: firmarToken({ rol: 'usuario', personaId: persona.id }),
-            });
+        // Se verifica DESPUÉS de la contraseña. Al revés, un 403 revelaría que
+        // esa cuenta existe a quien no sabe la contraseña.
+        if (!fila.activo) {
+            return res.status(403).json({ error: 'La cuenta está desactivada' });
         }
 
-        return res.status(400).json({ success: false, error: 'Rol no válido' });
+        return res.json({
+            rol: fila.rol,
+            token: firmarToken({ sub: fila.id, rol: fila.rol }),
+            usuario: { id: fila.id, usuario: fila.usuario, rol: fila.rol },
+        });
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ success: false, error: 'Error en el servidor' });
+        return res.status(500).json({ error: 'Error en el servidor' });
     }
 };
 
-const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const COSTO_BCRYPT = 12;
-const LARGO_MINIMO_PASSWORD = 8;
+// Columnas de `personas` que pueden salir del servidor.
+const CAMPOS_PERSONA = `id, tipo_documento, numero_documento,
+                        primer_nombre, segundo_nombre, primer_apellido, segundo_apellido,
+                        fecha_nacimiento, sexo, telefono,
+                        creado_por, version, cambio_seq, updated_at`;
 
-// Alta de participante. Es pública: se registra quien todavía no tiene cuenta.
-//
-// El id lo genera el dispositivo para que el alta funcione sin conexión, así
-// que la operación tiene que ser idempotente: la outbox puede reintentar el
-// mismo alta varias veces y todas tienen que devolver el mismo resultado.
-const register = async (req, res) => {
-    const { id, nombre, documento, telefono, password } = req.body;
+/**
+ * POST /api/auth/login-persona
+ *
+ * Entrada del rol usuario: una persona del padrón consultando sus datos.
+ *
+ * No pide contraseña. La credencial es el par tipo + número de documento, que
+ * NO es un secreto: quien lo conozca entra. Fue una decisión de negocio tomada
+ * con el riesgo advertido, y está documentada en docs/diseno-tres-roles.md.
+ *
+ * Por eso esta ruta va detrás del limitador de intentos: es la única barrera
+ * que hay contra un barrido de números de documento.
+ */
+const loginPersona = async (req, res) => {
+    const { tipo_documento, numero_documento } = req.body || {};
 
-    if (!UUID_V4.test(String(id || ''))) {
+    if (!tipo_documento || !numero_documento) {
         return res
             .status(400)
-            .json({ success: false, error: 'El id debe ser un UUID v4 válido' });
-    }
-    if (!nombre || !String(nombre).trim()) {
-        return res.status(400).json({ success: false, error: 'El nombre es obligatorio' });
-    }
-    if (!documento || !String(documento).trim()) {
-        return res.status(400).json({ success: false, error: 'El documento es obligatorio' });
-    }
-    if (!password || String(password).length < LARGO_MINIMO_PASSWORD) {
-        return res.status(400).json({
-            success: false,
-            error: `La contraseña debe tener al menos ${LARGO_MINIMO_PASSWORD} caracteres`,
-        });
+            .json({ error: 'El tipo y el número de documento son obligatorios' });
     }
 
     try {
-        const passwordHash = await bcrypt.hash(String(password), COSTO_BCRYPT);
-
-        const insercion = await pool.query(
-            `INSERT INTO personas (id, nombre, documento, telefono, password_hash, version)
-             VALUES ($1, $2, $3, $4, $5, 1)
-             ON CONFLICT (id) DO NOTHING
-             RETURNING *`,
-            [
-                id,
-                String(nombre).trim(),
-                String(documento).trim(),
-                telefono ? String(telefono).trim() : null,
-                passwordHash,
-            ]
+        const resultado = await pool.query(
+            `SELECT ${CAMPOS_PERSONA}
+               FROM personas
+              WHERE tipo_documento = $1
+                AND numero_documento = $2
+                AND deleted_at IS NULL`,
+            [String(tipo_documento).trim().toUpperCase(), String(numero_documento).trim()]
         );
 
-        let persona = insercion.rows[0];
+        const persona = resultado.rows[0];
 
         if (!persona) {
-            // El id ya existía: es un reintento de la outbox. Se responde lo
-            // mismo que la primera vez, pero solo si la contraseña coincide.
-            const existente = await pool.query('SELECT * FROM personas WHERE id = $1', [id]);
-            persona = existente.rows[0];
-
-            const passwordCoincide = persona
-                ? await bcrypt.compare(String(password), persona.password_hash)
-                : false;
-
-            if (!passwordCoincide) {
-                return res
-                    .status(409)
-                    .json({ success: false, error: 'Ya existe un registro con ese id' });
-            }
+            return res.status(401).json({ error: 'No hay un registro con ese documento' });
         }
 
-        const { password_hash, ...personaPublica } = persona;
-
-        return res.status(201).json({
-            success: true,
+        return res.json({
             rol: 'usuario',
-            persona: personaPublica,
-            token: firmarToken({ rol: 'usuario', personaId: persona.id }),
+            token: firmarToken({ sub: persona.id, rol: 'usuario' }),
+            persona,
         });
     } catch (error) {
-        // 23505: violación del índice único de documento.
-        if (error.code === '23505') {
-            return res
-                .status(409)
-                .json({ success: false, error: 'Ese documento ya está registrado' });
+        // 22P02 / 23514: tipo_documento fuera del CHECK de la tabla. Es una
+        // entrada inválida del cliente, no una falla del servidor.
+        if (error.code === '22P02' || error.code === '23514') {
+            return res.status(400).json({ error: 'Tipo de documento no válido' });
         }
         console.error(error);
-        return res.status(500).json({ success: false, error: 'Error en el servidor' });
+        return res.status(500).json({ error: 'Error en el servidor' });
     }
 };
 
 module.exports = {
-    login,
-    register,
+    loginOperador,
+    loginPersona,
 };
